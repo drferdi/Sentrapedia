@@ -2,7 +2,7 @@
   <img
     src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png"
     alt="Official Sentrapedia logo supplied by its creator"
-    width="700"
+    width="500"
   />
 </p>
 
