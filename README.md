@@ -10,12 +10,12 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 
 <p align="center">
   <a href="https://github.com/drferdi/Sentrapedia" title="Sentrapedia repository">
-    <img src="./src/app/icon.png" alt="Official Sentrapedia application mark" width="166" />
+    <img src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png" alt="Official Sentrapedia logo supplied by its creator" width="185" />
   </a>
 </p>
 
-<small><b><code>THE CLINICAL WORKSPACE</code></b></small><br />
-<sub>AN INDEPENDENT SENTRA PRODUCT</sub><br /><br />
+<small><b><code>CLINICAL INTELLIGENCE</code></b></small><br />
+<sub>DESIGNED FOR INDONESIA</sub><br /><br />
 
 <img src="https://img.shields.io/badge/SYSTEM-INTEGRATED-14B8A6?style=flat-square" alt="Integrated system" /><br />
 <img src="https://img.shields.io/badge/USE-SYNTHETIC%20ONLY-F59E0B?style=flat-square" alt="Synthetic cases only" />
@@ -28,12 +28,13 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 <h1>SENTRAPEDIA.</h1>
 
 <a href="https://github.com/drferdi/Sentrapedia" title="Explore Sentrapedia">
-  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&amp;weight=600&amp;size=22&amp;duration=3200&amp;pause=1300&amp;color=EB5939&amp;vCenter=true&amp;width=610&amp;height=39&amp;lines=Clinical+context.+Traceable+evidence.;AI+drafts.+Clinicians+decide.;One+workspace.+Three+distinct+layers." alt="Clinical context. Traceable evidence. AI drafts. Clinicians decide." />
+  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&amp;weight=600&amp;size=22&amp;duration=3200&amp;pause=1300&amp;color=EB5939&amp;vCenter=true&amp;width=610&amp;height=39&amp;lines=Bertanya.+Menalar.+Meninjau.;Clinical+reasoning+for+Indonesia.;Evidence+visible.+Clinicians+decide." alt="Bertanya. Menalar. Meninjau. Clinical reasoning for Indonesia. Evidence visible; clinicians decide." />
 </a>
 
 <p>
-<strong>From a clinical question to a reviewable answer.</strong><br />
-<small>Clinical workspace · Oracle / Oracle II · MIRA reasoning engine</small>
+<strong>Indonesia-first clinical reasoning, evidence exploration and documentation.</strong><br />
+<small>Clinical Q&amp;A · differential diagnosis · diagnostic workup · referral review · draft notes</small><br />
+<small>Powered by the Sentrapedia workspace, Oracle / Oracle II and MIRA.</small>
 </p>
 
 <sub><code>LOCAL :3101</code> &nbsp; / &nbsp; <code>HUMAN REVIEW REQUIRED</code></sub>
@@ -51,7 +52,7 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 <a href="https://www.linkedin.com/in/dr-ferdi-iskandar-1b620a3b5" title="LinkedIn"><img src="https://img.shields.io/badge/LinkedIn-808080?style=flat-square&amp;logo=linkedin&amp;logoColor=white" height="22" alt="LinkedIn" /></a>
 </p>
 
-<sub><code>FICTIONAL CASE → SOURCE CHECK → MIRA → VERIFIED DRAFT → CLINICIAN</code></sub>
+<sub><code>FICTIONAL CASE → SOURCE CHECK → MIRA → SCHEMA-CHECKED DRAFT → CLINICIAN REVIEW</code></sub>
 
 </td>
 </tr>
@@ -63,7 +64,9 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 
 ### One question. Traceable evidence. A clinician in control.
 
-Sentrapedia is an **independent clinical workspace for fictional cases and reviewable documentation**. The interface is primarily in Bahasa Indonesia, retaining recognizable English medical terminology. Rather than scattering encounter context, disease references, AI reasoning, and documentation across separate surfaces, Sentrapedia brings them into one navigable workflow.
+**Sentrapedia is an Indonesia-first clinical reasoning and documentation workspace** for exploring fictional encounters. It connects a question or clinical presentation to structured differential considerations, diagnostic workup, inspectable reference evidence and an editable document—without moving the final decision away from the clinician.
+
+The application speaks primarily in **Bahasa Indonesia**, retaining familiar English medical terminology where clinically useful. It brings encounter context, disease references, source-grounded reasoning, document templates and draft revision into a single operator workflow. It is a development-stage clinical intelligence product, **not a general-purpose chatbot, autonomous diagnostic system or deployed EHR**.
 
 **The problem** is not a shortage of generated medical text. It is the difficulty of connecting a clinical question to its original context, the evidence consulted, the reasoning presented, and the person accountable for the decision.
 
@@ -84,6 +87,57 @@ Sentrapedia is an **independent clinical workspace for fictional cases and revie
 **03 / MIRA** — Produce structured case-analysis drafts through a managed engine; retain validation and clinician review as separate steps.
 
 <sub><code>ONE WORKSPACE · THREE DISTINCT RESPONSIBILITIES · HUMAN-GOVERNED</code></sub>
+
+
+### The clinical problem we are building around
+
+A clinician's question rarely ends with a single answer. It usually progresses through **case synthesis → differential diagnosis → uncertainty and red flags → diagnostic next steps → evidence inspection → a reviewable note**. When those steps sit in disconnected tools, the operator must repeatedly restate the case, reconstruct why a possibility was considered and manually reconnect a recommendation to its source.
+
+Sentrapedia's product direction is to make that reasoning path a first-class part of the workspace: the **case**, **questions**, **candidate interpretations**, **source provenance** and **editable output** should stay meaningfully connected. The current build implements selected parts of this journey for synthetic data; it does not claim medically validated end-to-end automation.
+
+### What Sentrapedia helps an operator explore
+
+| <small>Clinical task</small> | <small>Operator's question</small> | <small>Available product surface</small> | <small>Human checkpoint</small> |
+|---|---|---|---|
+| <small>Clinical consultation</small> | <small>What does this fictional presentation raise, and what information is missing?</small> | <small>MIRA clinical Q&amp;A; inspectable context and available source grounding</small> | <small>Check assumptions, source quality and applicability</small> |
+| <small>Differential diagnosis</small> | <small>What alternative explanations should be considered?</small> | <small>Structured DDx drafting from synthetic case context</small> | <small>Re-rank or reject candidates; assess safety-critical omissions</small> |
+| <small>Diagnostic workup</small> | <small>What questions or investigations might distinguish the candidates?</small> | <small>MIRA workup draft and reference inspection</small> | <small>Judge necessity, feasibility, urgency and local standards</small> |
+| <small>Referral review</small> | <small>Is the simulated referral context complete and coherent?</small> | <small>MIRA referral-review draft</small> | <small>Verify referral indication and handoff information</small> |
+| <small>Classification</small> | <small>Which diagnostic coding candidates could describe the documented condition?</small> | <small>MIRA ICD-10 candidate drafting</small> | <small>Confirm coding rules, specificity and documentation</small> |
+| <small>Clinical documentation</small> | <small>How can the fictional encounter become a usable note?</small> | <small>Built-in document modes, local templates, editable drafts and revisions</small> | <small>Approve wording, facts, interpretation and final use</small> |
+
+**These are separate capabilities, not a claim that all modes invoke the same model or that every answer has an authoritative citation.** The repository contains 18 built-in document modes; five explicit modes route through MIRA. Some document operations are local and deterministic.
+
+### A fictional case, end to end
+
+The following is an **illustrative operator journey**, not a recorded clinical validation, benchmark or autonomous care pathway.
+
+1. **Capture context.** Open a fictional encounter and enter a non-identifying chief complaint, chronology, examination findings and relevant simulated history.
+2. **Ask a focused clinical question.** Use the clinical Q&A or differential mode to turn that context into a structured inquiry, not a final diagnosis.
+3. **Explore the possibilities.** Examine provisional alternatives, missing discriminating information and any warnings or uncertainty presented in the draft.
+4. **Inspect the evidence.** Review Oracle disease catalog context and Oracle II provenance-linked passages where valid sources are available; source presence does not establish source correctness.
+5. **Draft the next artifact.** Use a workup or referral-review inquiry, then shape the results into an appropriate editable documentation format.
+6. **Review and revise.** Inspect source snapshots, trace metadata and the clinical content itself. The model's schema checks are not a clinical sign-off.
+7. **Keep accountability visible.** The fictional case remains subject to clinician review; nothing in this sequence permits deployment for real patient decisions.
+
+### Indonesia-first is a product direction, not a certification
+
+- **Language and workflow:** the interface is primarily Bahasa Indonesia and is framed around clinician-readable medical documentation rather than generic AI chat responses.
+- **Clinical reasoning as the center:** question answering, differential analysis, source inspection and drafting are adjacent activities rather than unrelated text-generation demos.
+- **Evidence transparency:** Oracle II retains source/page/hash metadata so operators can examine provenance and recognize when retrieval is missing or uncertain.
+- **Professional accountability:** the product keeps the reviewing clinician in the decision loop; the agent proposes, the operator evaluates.
+- **Important distinction:** Indonesia-first **does not mean** the available corpus has been exhaustively validated against Indonesian national guidelines, that terminology/coding is certified, or that the software integrates with SATUSEHAT, BPJS or a production RME.
+
+<details>
+<summary><b><code>PRODUCT HORIZON // VISION VS. CURRENT BUILD</code></b></summary>
+
+**Implemented or configured in this repository:** local synthetic encounter workspace; document templates; Oracle disease catalog; Oracle II read-only evidence retrieval; bundled MIRA case modes; schema/identity gates; edit-and-review workflows; local exports and limited runtime trace information.
+
+**Still requires independent engineering and validation before any real-world clinical application:** secure patient identity and access controls; compliant personal-data processing and retention; formally curated Indonesian clinical evidence; evaluation of medical correctness, bias, red flags and failure modes; oversight and regulatory assessment; robust multiuser infrastructure; institution-approved RME interoperability; real-case pilots and explicit clinician/owner authorization.
+
+**No timeline, certification, institution, clinical outcome or interoperability claim is implied by this direction.**
+
+</details>
 
 ## 02 / DOCTRINE
 
@@ -254,6 +308,29 @@ flowchart TB
 
 **Model selection:** `google/gemini-2.5-flash` is configured for planning and assessment through OpenRouter, alongside provisional differentials, fast assessment/therapy and throughput routing. Configured guards include **US$0.10 per step**, **US$5 daily ledger**, **20-second engine deadline**, and **135-second gateway deadline**. These are limits and targets, **not guaranteed speed or charges**. The launcher sets `MIRA_OPENROUTER_ZDR=false`: zero-data-retention protection must not be assumed. [Source](scripts/mira-runtime.mjs).
 
+
+### Clinical inquiry modes
+
+Five explicit inquiry modes are connected to the managed MIRA pathway. The input is a **fictional** encounter or question, screened by the same-origin gateway and the Python service before external model inference. Returned text is a **draft to inspect**.
+
+| <small>Mode</small> | <small>Intended operator task</small> | <small>Interpretation boundary</small> |
+|---|---|---|
+| <small>Clinical question</small> | <small>Frame a specific inquiry using available case details and evidence context</small> | <small>Do not confuse a fluent answer with a validated clinical conclusion</small> |
+| <small>Differential diagnosis (DDx)</small> | <small>Explore plausible alternatives and reasoning against the simulated presentation</small> | <small>Missing red flags and overlooked diagnoses remain clinical risks</small> |
+| <small>Diagnostic workup</small> | <small>Draft information-gathering or investigation considerations</small> | <small>Not an order set; no automatic tests, medications or procedures</small> |
+| <small>Referral review</small> | <small>Assess clarity and completeness of a simulated clinical handoff</small> | <small>Does not send, authorize or validate a real referral</small> |
+| <small>ICD-10</small> | <small>Draft diagnostic classification candidates</small> | <small>No billing, regulatory or coding-accuracy certification</small> |
+
+The separate **document workspace** contains 18 built-in document modes and local formatting functions. Do not interpret the combined count as 23 independently validated AI products: MIRA inquiry modes and note/template modes solve related but different jobs.
+
+### Three knowledge responsibilities
+
+**Oracle / reference discovery.** A bundled JSON disease catalog supports quick search by name, code and category. Its 144 records across 15 categories are catalog data, not an assertion that the reference is exhaustive or nationally endorsed.
+
+**Oracle II / evidence provenance.** Read-only SQLite retrieval and source manifests provide bounded passages with document/page/hash context. Evidence is available only where source ingestion and quality gates support it. A match can be absent, outdated, partial or misleading, and machine-selected excerpts are not automatically clinician-approved.
+
+**MIRA / provisional synthesis.** The Python reasoning service synthesizes available fictional context and bounded references through configured model access and structured response contracts. A coherent draft, schema-valid output, and successful provider call are **three different facts**—none alone proves medical validity.
+
 ### Repository anatomy
 
 ```text
@@ -323,6 +400,20 @@ flowchart TB
 The client constructs a case from the complaint, any recorded numeric age/sex, encounter context and notes—not patient name/ID. The client, same-origin gateway and Python service enforce layered input checks. Oracle II retrieves no more than six bounded source passages and verifies evidence provenance before a synthetic-tagged call. The returned structure and model/cost metadata are checked before saving a reviewable draft with trace, timestamp and source snapshot.
 
 Missing source matches, budget exhaustion, bad output, provider failure, identity-pattern rejection and cancellation do not create fabricated draft responses; the prompt is preserved for review. **Identity regexes are not certified anonymization.** Other document modes and personal templates can use deterministic formatting without paid inference.
+
+
+### Reading a clinical AI output responsibly
+
+A useful result is more than generated prose. Review the **case context** supplied to the model, **source passages and provenance** attached to the request, **drafted reasoning** or classification, **missing information or uncertainty**, and **trace/revision metadata** retained by the application.
+
+| <small>Signal</small> | <small>What it supports</small> | <small>What it does not establish</small> |
+|---|---|---|
+| <small>Schema-valid response</small> | <small>Expected machine-readable response structure was accepted</small> | <small>Correct medical reasoning or diagnosis</small> |
+| <small>Source hash and page</small> | <small>Traceability to an indexed passage</small> | <small>Current guideline status, peer review or clinical relevance</small> |
+| <small>Model/cost trace</small> | <small>Inspectability of a particular run and budget behavior</small> | <small>Accuracy, fairness, privacy guarantees or determinism</small> |
+| <small>Edited draft and checklist</small> | <small>Document revision and a place for human inspection</small> | <small>A signed patient record or formal electronic signature</small> |
+
+**Review rule:** when the case lacks critical information, a retrieval is absent, or the answer conflicts with professional judgment, keep the uncertainty visible and do not turn the draft into a clinical instruction. A rejected or failed request must never be silently represented as successful reasoning.
 
 ## 06 / BUILD PROTOCOL
 
@@ -529,6 +620,17 @@ Primary code: [route](src/app/api/mira/route.ts) · [gateway](src/lib/mira/gatew
 **Oracle is not Oracle II.** The UI disease catalog reads `oracle/sentrapedia.json`. Oracle II also ships a read-only SQLite source corpus, evidence files and provenance metadata. [Its source parser QA](oracle-ii/README.md) documents **72 newly reprocessed PDFs, 8,332 source-page text records and 904 machine-selected literal excerpts**. Machine-selected text may be semantically misclassified: unreviewed candidate fields remain quarantined, not promoted as clinician-approved facts.
 
 The account dialog supports JSON export and clearing browser-local records, but no authenticated multiuser database or guaranteed sync/retention exists. Audit history under `.runtime/mira-deepseek/audit` should be preserved when relocating an existing installation to retain daily-budget context.
+
+
+### Local development privacy: what the architecture really means
+
+"Local workspace" refers to the web process and browser-side fictional records; it does **not** mean every inference stays on the device. AI-assisted case inquiries call the managed MIRA service, which communicates with an **external OpenRouter model endpoint**. The project deliberately disallows real patient information during this development phase.
+
+- **Browser:** synthetic patient/encounter and draft state is kept in localStorage. This is not an encrypted clinical database, shared patient chart or backup strategy.
+- **Application gateway:** same-origin and synthetic-only input rules reduce unintended use; pattern-based identity screening cannot guarantee anonymization.
+- **Grounding corpus:** bundled Oracle II material is indexed locally and should be reviewed for extraction quality, licensing and clinical relevance before being relied upon.
+- **External inference:** prompts sent beyond the local process cross a trust boundary. The configured runtime does not assert zero data retention.
+- **Human outputs:** editable notes are drafts, without authenticated signatures, chart finalization, prescribing authority, or automatic EHR submission.
 
 ## 13 / FAILURE MODES · LIMITATIONS · TROUBLESHOOTING
 
