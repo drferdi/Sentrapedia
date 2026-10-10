@@ -2,18 +2,17 @@
 Evidence baseline: drferdi/Sentrapedia, main, 2026-10-11.
 Clinical boundary: synthetic-only development; no clinical validation claim. -->
 
+<p align="center">
+  <img src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png" alt="Official Sentrapedia logo supplied by its creator" width="700" />
+</p>
+
 <table width="100%">
 <tr>
 <td width="31%" align="center" valign="middle">
 
 <sub><code>001 / SENTRA HEALTHCARE</code></sub>
 
-<p align="center">
-  <a href="https://github.com/drferdi/Sentrapedia" title="Sentrapedia repository">
-    <img src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png" alt="Official Sentrapedia logo supplied by its creator" width="185" />
-  </a>
-</p>
-
+<br /><br />
 <small><b><code>CLINICAL INTELLIGENCE</code></b></small><br />
 <sub>DESIGNED FOR INDONESIA</sub><br /><br />
 
