@@ -4,40 +4,54 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 
 <table width="100%">
 <tr>
-<td width="34%" align="center" valign="middle">
+<td width="31%" align="center" valign="middle">
 
-<a href="https://github.com/drferdi/Sentrapedia"><img src="./src/app/icon.png" alt="Sentrapedia official application icon" width="170" /></a>
+<sub><code>001 / SENTRA HEALTHCARE</code></sub>
 
-<br /><br />
-<small><b><code>SENTRAPEDIA</code></b></small><br />
-<small>Clinical AI Workspace</small><br /><br />
-<img src="https://img.shields.io/badge/DOMAIN-HEALTHCARE-5B8CFF?style=flat-square" alt="Healthcare" />
-<img src="https://img.shields.io/badge/STATE-SYNTHETIC%20ONLY-F59E0B?style=flat-square" alt="Synthetic-only" />
+<p align="center">
+  <a href="https://github.com/drferdi/Sentrapedia" title="Sentrapedia repository">
+    <img src="./src/app/icon.png" alt="Official Sentrapedia application mark" width="166" />
+  </a>
+</p>
+
+<small><b><code>THE CLINICAL WORKSPACE</code></b></small><br />
+<sub>AN INDEPENDENT SENTRA PRODUCT</sub><br /><br />
+
+<img src="https://img.shields.io/badge/SYSTEM-INTEGRATED-14B8A6?style=flat-square" alt="Integrated system" /><br />
+<img src="https://img.shields.io/badge/USE-SYNTHETIC%20ONLY-F59E0B?style=flat-square" alt="Synthetic cases only" />
 
 </td>
-<td width="66%" valign="top">
+<td width="69%" valign="middle">
 
-SENTRA / SENTRAPEDIA
+<sub><b><code>SENTRA / SENTRAPEDIA</code></b></sub>
 
-<a href="https://github.com/drferdi/Sentrapedia"><img src="https://readme-typing-svg.demolab.com?font=Caveat&weight=700&size=33&duration=3400&pause=1500&color=EB5939&vCenter=true&width=710&height=44&lines=Clinical+reasoning%2C+with+evidence.;Every+draft+needs+a+clinician.;One+workspace.+Oracle+II.+MIRA." alt="Clinical reasoning, with evidence; every draft needs a clinician" /></a>
+<h1>SENTRAPEDIA.</h1>
 
-<b>Operational signal:</b> `127.0.0.1:3101` · integrated MIRA · fictional cases only
+<a href="https://github.com/drferdi/Sentrapedia" title="Explore Sentrapedia">
+  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&amp;weight=600&amp;size=22&amp;duration=3200&amp;pause=1300&amp;color=EB5939&amp;vCenter=true&amp;width=610&amp;height=39&amp;lines=Clinical+context.+Traceable+evidence.;AI+drafts.+Clinicians+decide.;One+workspace.+Three+distinct+layers." alt="Clinical context. Traceable evidence. AI drafts. Clinicians decide." />
+</a>
 
-<a href="https://sentrahai.com/"><b>Sentra Artificial Intelligence</b></a><br />
-An Indonesian-language clinical documentation and case-review workspace combining local encounter workflows, Oracle references, Oracle II grounding, and the managed MIRA reasoning engine.
+<p>
+<strong>From a clinical question to a reviewable answer.</strong><br />
+<small>Clinical workspace · Oracle / Oracle II · MIRA reasoning engine</small>
+</p>
 
-<small>Architected and built by <b>dr. Ferdi Iskandar (the Gaffer)</b>.</small>
+<sub><code>LOCAL :3101</code> &nbsp; / &nbsp; <code>HUMAN REVIEW REQUIRED</code></sub>
+
+<p>
+<small>By <b>dr. Ferdi Iskandar (the Gaffer)</b> · <a href="https://sentrahai.com/">Sentra Artificial Intelligence</a></small>
+</p>
 
 <p>
 <a href="https://github.com/drferdi/Sentrapedia" title="GitHub"><img src="https://cdn.simpleicons.org/github/8B949E" width="22" height="22" alt="GitHub" /></a>&nbsp;&nbsp;
-<a href="https://ferdiiskandar.com" title="Creator website"><img src="https://cdn.simpleicons.org/vercel/8B949E" width="22" height="22" alt="Website" /></a>&nbsp;&nbsp;
+<a href="https://ferdiiskandar.com" title="Creator website"><img src="https://cdn.simpleicons.org/vercel/8B949E" width="22" height="22" alt="Personal website" /></a>&nbsp;&nbsp;
 <a href="https://sentrahai.com/" title="Sentra"><img src="https://cdn.simpleicons.org/googlechrome/8B949E" width="22" height="22" alt="Sentra" /></a>&nbsp;&nbsp;
 <a href="https://medium.com/@drferdiiskandar" title="Medium"><img src="https://cdn.simpleicons.org/medium/8B949E" width="22" height="22" alt="Medium" /></a>&nbsp;&nbsp;
 <a href="https://orcid.org/0009-0003-3788-1307" title="ORCID"><img src="https://cdn.simpleicons.org/orcid/8B949E" width="22" height="22" alt="ORCID" /></a>&nbsp;&nbsp;
-<a href="https://www.linkedin.com/in/dr-ferdi-iskandar-1b620a3b5" title="LinkedIn"><img src="https://img.shields.io/badge/LinkedIn-808080?style=flat-square&logo=linkedin&logoColor=white" height="22" alt="LinkedIn" /></a>
+<a href="https://www.linkedin.com/in/dr-ferdi-iskandar-1b620a3b5" title="LinkedIn"><img src="https://img.shields.io/badge/LinkedIn-808080?style=flat-square&amp;logo=linkedin&amp;logoColor=white" height="22" alt="LinkedIn" /></a>
 </p>
 
-<sub><code>FICTIONAL INPUT → ORACLE II EVIDENCE → MIRA → SCHEMA VALIDATION → HUMAN REVIEW</code></sub>
+<sub><code>FICTIONAL CASE → SOURCE CHECK → MIRA → VERIFIED DRAFT → CLINICIAN</code></sub>
 
 </td>
 </tr>
@@ -45,29 +59,31 @@ An Indonesian-language clinical documentation and case-review workspace combinin
 
 ## 01 / ORIGIN SIGNAL
 
-Sentrapedia is a **standalone clinical workspace for synthetic-case exploration and reviewable documentation**. Its user interface prioritizes Bahasa Indonesia, retaining established English medical terminology. Patient and encounter navigation, document templates, source references, AI-assisted assessment, and reviewable draft histories live in one application.
+<sub><code>THE MISSION / CLINICAL INTELLIGENCE WITH HUMAN AUTHORITY</code></sub>
 
-**Problem:** fragmented clinical notes, reference material, reasoning output, and review status are difficult to inspect as one accountable workflow. **Objective:** keep the original fictional case, available evidence, generated text, verification checks, and human review together.
+### One question. Traceable evidence. A clinician in control.
 
-**Intended operator:** clinicians and developers evaluating fictional cases and documentation patterns. **Final authority:** the reviewing clinician for medical interpretation, and the authorized product owner for high-impact system changes.
+Sentrapedia is an **independent clinical workspace for fictional cases and reviewable documentation**. The interface is primarily in Bahasa Indonesia, retaining recognizable English medical terminology. Rather than scattering encounter context, disease references, AI reasoning, and documentation across separate surfaces, Sentrapedia brings them into one navigable workflow.
 
-**In scope:** simulated patients and encounters; task lists; local documentation templates; optional dictation; local backup; Oracle catalog search; Oracle II source-grounded MIRA case review; editable drafts and revisions.
+**The problem** is not a shortage of generated medical text. It is the difficulty of connecting a clinical question to its original context, the evidence consulted, the reasoning presented, and the person accountable for the decision.
 
-**Outside scope:** real patient records, live prescribing, autonomous diagnosis, production EHR integration, clinical validation, production-grade identity/access management, and verified hospital deployment.
+**The purpose** is to make that chain visible—without presenting an experimental model as a clinician, an unreviewed reference as a verified guideline, or a development workspace as a production EHR.
 
-<p align="center">
-<img src="https://img.shields.io/badge/SIGNAL-ONE%20MANAGED%20SYSTEM-5B8CFF?style=flat-square" alt="Managed system" />
-<img src="https://img.shields.io/badge/SIGNAL-SOURCE%20AWARE-0EA5E9?style=flat-square" alt="Source-aware" />
-<img src="https://img.shields.io/badge/SIGNAL-CLINICIAN%20AUTHORITY-F59E0B?style=flat-square" alt="Clinician authority" />
-</p>
+**Designed for:** clinicians and developers exploring synthetic clinical cases and documentation workflows. **Final authority:** the reviewing clinician for clinical interpretation; the authorized owner for high-impact system decisions.
 
-<table width="100%">
-<tr>
-<td width="33%" valign="top"><small><b><code>LAYER I · WORKSPACE</code></b></small><br /><small>Simulated patients, encounters, notes, templates, work tasks, review states, and exports.</small></td>
-<td width="33%" valign="top"><small><b><code>LAYER II · ORACLE</code></b></small><br /><small>Searchable disease catalog and provenance-aware local Oracle II source retrieval.</small></td>
-<td width="33%" valign="top"><small><b><code>LAYER III · MIRA</code></b></small><br /><small>Integrated Python clinical reasoning service, policy checks, external provider and validated drafts.</small></td>
-</tr>
-</table>
+**Current scope:** fictional patients and encounters, drafts and templates, clinical work tasks, optional dictation, local exports, Oracle reference search, Oracle II source grounding, managed MIRA analysis and human review.
+
+**Outside scope:** real patient records, prescribing automation, autonomous medical decisions, production EHR integration, clinical certification and live clinical deployment.
+
+---
+
+**01 / WORKSPACE** — Organize fictional cases, notes, templates, tasks, drafts and revisions.
+
+**02 / ORACLE + ORACLE II** — Search the bundled disease catalog and trace supporting source evidence with explicit review limits.
+
+**03 / MIRA** — Produce structured case-analysis drafts through a managed engine; retain validation and clinician review as separate steps.
+
+<sub><code>ONE WORKSPACE · THREE DISTINCT RESPONSIBILITIES · HUMAN-GOVERNED</code></sub>
 
 ## 02 / DOCTRINE
 
