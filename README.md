@@ -33,7 +33,7 @@ Clinical boundary: synthetic-only development; no clinical validation claim. -->
 
 <p>
 <strong>Indonesia-first clinical reasoning, evidence exploration and documentation.</strong><br />
-<small>Clinical Q&amp;A · differential diagnosis · diagnostic workup · referral review · draft notes</small><br />
+<small>Clinical Q&amp;A · differential diagnosis · diagnostic workup · referral assessment · draft notes</small><br />
 <small>Powered by the Sentrapedia workspace, Oracle / Oracle II and MIRA.</small>
 </p>
 
@@ -102,7 +102,7 @@ Sentrapedia's product direction is to make that reasoning path a first-class par
 | <small>Clinical consultation</small> | <small>What does this fictional presentation raise, and what information is missing?</small> | <small>MIRA clinical Q&amp;A; inspectable context and available source grounding</small> | <small>Check assumptions, source quality and applicability</small> |
 | <small>Differential diagnosis</small> | <small>What alternative explanations should be considered?</small> | <small>Structured DDx drafting from synthetic case context</small> | <small>Re-rank or reject candidates; assess safety-critical omissions</small> |
 | <small>Diagnostic workup</small> | <small>What questions or investigations might distinguish the candidates?</small> | <small>MIRA workup draft and reference inspection</small> | <small>Judge necessity, feasibility, urgency and local standards</small> |
-| <small>Referral review</small> | <small>Is the simulated referral context complete and coherent?</small> | <small>MIRA referral-review draft</small> | <small>Verify referral indication and handoff information</small> |
+| <small>Referral assessment</small> | <small>Does the fictional case warrant referral consideration, and what should the handoff contain?</small> | <small>MIRA referral/disposition analysis draft</small> | <small>Verify necessity, disposition and handoff information</small> |
 | <small>Classification</small> | <small>Which diagnostic coding candidates could describe the documented condition?</small> | <small>MIRA ICD-10 candidate drafting</small> | <small>Confirm coding rules, specificity and documentation</small> |
 | <small>Clinical documentation</small> | <small>How can the fictional encounter become a usable note?</small> | <small>Built-in document modes, local templates, editable drafts and revisions</small> | <small>Approve wording, facts, interpretation and final use</small> |
 
@@ -116,7 +116,7 @@ The following is an **illustrative operator journey**, not a recorded clinical v
 2. **Ask a focused clinical question.** Use the clinical Q&A or differential mode to turn that context into a structured inquiry, not a final diagnosis.
 3. **Explore the possibilities.** Examine provisional alternatives, missing discriminating information and any warnings or uncertainty presented in the draft.
 4. **Inspect the evidence.** Review Oracle disease catalog context and Oracle II provenance-linked passages where valid sources are available; source presence does not establish source correctness.
-5. **Draft the next artifact.** Use a workup or referral-review inquiry, then shape the results into an appropriate editable documentation format.
+5. **Draft the next artifact.** Use a workup or referral-assessment inquiry, then shape the results into an appropriate editable documentation format.
 6. **Review and revise.** Inspect source snapshots, trace metadata and the clinical content itself. The model's schema checks are not a clinical sign-off.
 7. **Keep accountability visible.** The fictional case remains subject to clinician review; nothing in this sequence permits deployment for real patient decisions.
 
@@ -318,7 +318,7 @@ Five explicit inquiry modes are connected to the managed MIRA pathway. The input
 | <small>Clinical question</small> | <small>Frame a specific inquiry using available case details and evidence context</small> | <small>Do not confuse a fluent answer with a validated clinical conclusion</small> |
 | <small>Differential diagnosis (DDx)</small> | <small>Explore plausible alternatives and reasoning against the simulated presentation</small> | <small>Missing red flags and overlooked diagnoses remain clinical risks</small> |
 | <small>Diagnostic workup</small> | <small>Draft information-gathering or investigation considerations</small> | <small>Not an order set; no automatic tests, medications or procedures</small> |
-| <small>Referral review</small> | <small>Assess clarity and completeness of a simulated clinical handoff</small> | <small>Does not send, authorize or validate a real referral</small> |
+| <small>Referral assessment (`refer`)</small> | <small>Draft referral considerations and disposition for a simulated case</small> | <small>Does not send, authorize or validate a real referral</small> |
 | <small>ICD-10</small> | <small>Draft diagnostic classification candidates</small> | <small>No billing, regulatory or coding-accuracy certification</small> |
 
 The separate **document workspace** contains 18 built-in document modes and local formatting functions. Do not interpret the combined count as 23 independently validated AI products: MIRA inquiry modes and note/template modes solve related but different jobs.
