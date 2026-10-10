@@ -1,62 +1,10 @@
-<!-- SENTRA PRODUCT README · CANONICAL v2.1
-Evidence baseline: drferdi/Sentrapedia, main, 2026-10-11.
-Clinical boundary: synthetic-only development; no clinical validation claim. -->
-
-<table width="100%">
-<tr>
-<td width="31%" align="center" valign="middle">
-
-<sub><code>001 / SENTRA HEALTHCARE</code></sub>
-
 <p align="center">
-  <a href="https://github.com/drferdi/Sentrapedia" title="Sentrapedia repository">
-    <img src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png" alt="Official Sentrapedia logo supplied by its creator" width="185" />
-  </a>
+  <img
+    src="https://i.ibb.co.com/nqnsqfCs/sentrapedia-logo-l1.png"
+    alt="Official Sentrapedia logo supplied by its creator"
+    width="700"
+  />
 </p>
-
-<small><b><code>CLINICAL INTELLIGENCE</code></b></small><br />
-<sub>DESIGNED FOR INDONESIA</sub><br /><br />
-
-<img src="https://img.shields.io/badge/SYSTEM-INTEGRATED-14B8A6?style=flat-square" alt="Integrated system" /><br />
-<img src="https://img.shields.io/badge/USE-SYNTHETIC%20ONLY-F59E0B?style=flat-square" alt="Synthetic cases only" />
-
-</td>
-<td width="69%" valign="middle">
-
-<sub><b><code>SENTRA / SENTRAPEDIA</code></b></sub>
-
-<h1>SENTRAPEDIA.</h1>
-
-<a href="https://github.com/drferdi/Sentrapedia" title="Explore Sentrapedia">
-  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Mono&amp;weight=600&amp;size=22&amp;duration=3200&amp;pause=1300&amp;color=EB5939&amp;vCenter=true&amp;width=610&amp;height=39&amp;lines=Bertanya.+Menalar.+Meninjau.;Clinical+reasoning+for+Indonesia.;Evidence+visible.+Clinicians+decide." alt="Bertanya. Menalar. Meninjau. Clinical reasoning for Indonesia. Evidence visible; clinicians decide." />
-</a>
-
-<p>
-<strong>Indonesia-first clinical reasoning, evidence exploration and documentation.</strong><br />
-<small>Clinical Q&amp;A · differential diagnosis · diagnostic workup · referral assessment · draft notes</small><br />
-<small>Powered by the Sentrapedia workspace, Oracle / Oracle II and MIRA.</small>
-</p>
-
-<sub><code>LOCAL :3101</code> &nbsp; / &nbsp; <code>HUMAN REVIEW REQUIRED</code></sub>
-
-<p>
-<small>By <b>dr. Ferdi Iskandar (the Gaffer)</b> · <a href="https://sentrahai.com/">Sentra Artificial Intelligence</a></small>
-</p>
-
-<p>
-<a href="https://github.com/drferdi/Sentrapedia" title="GitHub"><img src="https://cdn.simpleicons.org/github/8B949E" width="22" height="22" alt="GitHub" /></a>&nbsp;&nbsp;
-<a href="https://ferdiiskandar.com" title="Creator website"><img src="https://cdn.simpleicons.org/vercel/8B949E" width="22" height="22" alt="Personal website" /></a>&nbsp;&nbsp;
-<a href="https://sentrahai.com/" title="Sentra"><img src="https://cdn.simpleicons.org/googlechrome/8B949E" width="22" height="22" alt="Sentra" /></a>&nbsp;&nbsp;
-<a href="https://medium.com/@drferdiiskandar" title="Medium"><img src="https://cdn.simpleicons.org/medium/8B949E" width="22" height="22" alt="Medium" /></a>&nbsp;&nbsp;
-<a href="https://orcid.org/0009-0003-3788-1307" title="ORCID"><img src="https://cdn.simpleicons.org/orcid/8B949E" width="22" height="22" alt="ORCID" /></a>&nbsp;&nbsp;
-<a href="https://www.linkedin.com/in/dr-ferdi-iskandar-1b620a3b5" title="LinkedIn"><img src="https://img.shields.io/badge/LinkedIn-808080?style=flat-square&amp;logo=linkedin&amp;logoColor=white" height="22" alt="LinkedIn" /></a>
-</p>
-
-<sub><code>FICTIONAL CASE → SOURCE CHECK → MIRA → SCHEMA-CHECKED DRAFT → CLINICIAN REVIEW</code></sub>
-
-</td>
-</tr>
-</table>
 
 ## 01 / ORIGIN SIGNAL
 
