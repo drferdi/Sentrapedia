@@ -129,7 +129,7 @@ flowchart TB
   CATALOG[("ORACLE DISEASE JSON")]
   GATE["NEXT.JS /api/mira + INPUT GATES"]
   SOURCE[("ORACLE II SQLITE / SOURCE EVIDENCE")]
-  AADI RAG["BUNDLED AADI RAG / PYTHON"]
+  AADI_ENGINE["BUNDLED AADI RAG / PYTHON"]
   PROVIDER["OPENROUTER / GEMINI FLASH"]
   DRAFT["VALIDATED DRAFT + SOURCE SNAPSHOT"]
   REVIEW["HUMAN CLINICAL REVIEW"]
@@ -139,12 +139,12 @@ flowchart TB
   CATALOG --> UI
   UI --> GATE
   SOURCE --> GATE
-  GATE --> AADI RAG
-  AADI RAG <--> PROVIDER
-  AADI RAG --> DRAFT --> UI
+  GATE --> AADI_ENGINE
+  AADI_ENGINE <--> PROVIDER
+  AADI_ENGINE --> DRAFT --> UI
   UI --> REVIEW
   GATE -. invalid / missing source .-> FAIL
-  AADI RAG -. provider error .-> FAIL
+  AADI_ENGINE -. provider error .-> FAIL
 
   classDef authority fill:#0D1117,stroke:#F59E0B,color:#FFFFFF,stroke-width:2px;
   classDef core fill:#0D1117,stroke:#5B8CFF,color:#FFFFFF,stroke-width:2px;
@@ -157,7 +157,7 @@ flowchart TB
   class HUMAN,REVIEW authority;
   class UI,LOCAL,DRAFT surface;
   class GATE control;
-  class AADI RAG agent;
+  class AADI_ENGINE agent;
   class CATALOG,STORE,SOURCE data;
   class PROVIDER shared;
   class FAIL danger;
