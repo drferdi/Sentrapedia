@@ -34,6 +34,20 @@ describe("clinical evidence gate", () => {
     expect(gateEvidence(undefined, dx)).toBe(dx);
     expect(gateEvidence(tx, { nope: true })).toBe(tx);
   });
+  it("takes a strength only from the drug's own item, not from another drug in the same passage", () => {
+    const listed = bundle("Pneumonia, kombinasi KDT: a. amoksisilin 500 mg b. azitromisin 250 mg");
+    expect(gateTherapy(therapy([drug("Amoxicillin", "3x500mg"), drug("Azitromisin", "1x500mg")]), listed, pneumonia).report.drugs.map(d => d.status)).toEqual(["verified", "doseRemoved"]);
+    const bulleted = bundle("Pneumonia:\n- Amoksisilin 500 mg 3 kali sehari\n- Azitromisin 250 mg 1 kali sehari");
+    expect(gateTherapy(therapy([drug("Amoxicillin", "3x250mg")]), bulleted, pneumonia).report.drugs[0].status).toBe("doseRemoved");
+  });
+  it("keeps a strength listed after a long restriction or a numbered form of the same drug", () => {
+    const fornas = bundle("Pneumonia: fosfomisin trometamol untuk sistitis non komplikata pada wanita atau profilaksis pada tindakan Transrectal Prostat Biopsy (TR-PB) 1. granula 3 g  3 metenamin");
+    expect(gateTherapy(therapy([drug("Fosfomisin trometamol", "1x3g")]), fornas, pneumonia).report.drugs[0].status).toBe("verified");
+  });
+  it("still reads tablet content after the next drug of a combination", () => {
+    const mpff = bundle("Pneumonia: Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet selama 4 hari.");
+    expect(gateTherapy(therapy([drug("Diosmin", "3x450mg")]), mpff, pneumonia).report.drugs[0].status).toBe("doseRemoved");
+  });
   it("blanks a dose whose strength is not in a passage naming the drug", () => {
     const { therapy: out, report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Amoksisilin 250 mg untuk anak."), pneumonia);
     expect(out?.regimen[0]).toMatchObject({ drug: "Amoxicillin", dose: "" });

@@ -36,7 +36,9 @@ const UNITS_PER_DOSE = new RegExp(String.raw`\d+\s*[x×]\s*${TABLETS}|(?:^|[^\d.
 // A passage doses with a strength when one of its occurrences is not followed, within 80 characters, by a multi-tablet dose;
 // a tablet or capsule count is itself the dose.
 const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
-const doses = (pattern: RegExp, text: string) => [...text.matchAll(new RegExp(pattern.source, "gi"))].some(m => COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80)));
+// Only a strength inside [from, to) counts; the tablet check still reads on past `to` ("Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet").
+const doses = (pattern: RegExp, text: string, from = 0, to = text.length) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
+  .some(m => m.index >= from && m.index + m[0].length <= to && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
 
 // English and Indonesian spellings of generic names converge: amoxicillin and amoksisilin -> amoksisilin,
 // chlorpheniramine and klorfeniramin -> klorfeniramin.
@@ -46,6 +48,15 @@ function spell(word: string): string {
 const tokens = (text: string) => text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z]+/).filter(Boolean).map(spell);
 const names = (drug: string) => tokens(drug).filter(word => word.length >= 4);
 const mentions = (passage: string[], drug: string) => { const wanted = names(drug); return wanted.length > 0 && wanted.every(word => passage.includes(word)); };
+// A strength belongs to the drug it follows: the 200 characters after each mention of the drug's first name word, cut at the
+// next lettered item or bullet. So "a. zidovudin 300 mg b. lamivudin 150 mg" does not dose lamivudin 300 mg, while FORNAS
+// forms ("1. tab 5 mg"), a dewasa; anak split and a combination's shared count ("450 mg + Hesperidin 50 mg 3 x 2 tablet") stay.
+const OWN_END = /(?:^|\s)[a-z][.)]\s|[•]|\n\s*-/;
+const owned = (text: string, drug: string) => [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).includes(names(drug)[0])).map(m => {
+  const from = m.index + m[0].length;
+  const end = text.slice(from, from + 200).search(OWN_END);
+  return { from, to: from + (end < 0 ? Math.min(200, text.length - from) : end) };
+});
 // Words that do not single out one disease: qualifiers, function words, and any word in three or more catalog names (demam, akut, jantung).
 const catalogCounts = new Map<string, number>();
 theOracleDiseases.forEach(d => new Set(tokens(d.nama)).forEach(word => catalogCounts.set(word, (catalogCounts.get(word) ?? 0) + 1)));
@@ -112,7 +123,7 @@ export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBund
     const named = naming(r.drug);
     if (!named.length) return { drug: r.drug, dose: r.dose, status: "removed", evidenceIds: [] };
     const patterns = strengths(r.dose + " " + r.drug);
-    const dosing = patterns.length ? dosingFor(r.drug).filter(p => patterns.every(pattern => doses(pattern, p.text))) : [];
+    const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to }) => patterns.every(pattern => doses(pattern, p.text, from, to)))) : [];
     return dosing.length ? { drug: r.drug, dose: r.dose, status: "verified", evidenceIds: dosing.map(p => p.id) } : { drug: r.drug, dose: r.dose, status: "doseRemoved", evidenceIds: named.map(p => p.id) };
   });
   const kept = therapy.regimen.filter((_, i) => drugs[i].status !== "removed");
