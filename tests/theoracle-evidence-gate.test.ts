@@ -103,7 +103,7 @@ describe("clinical evidence gate", () => {
     expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 1 g. klaritromisin 500 mg")).toBe("doseRemoved");
     expect(one("Isosorbid dinitrat", "1x20mg", "Pneumonia: isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg")).toBe("doseRemoved");
     expect(one("Isosorbid dinitrat", "1x5mg", "Pneumonia: isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg")).toBe("verified");
-    expect(one("Diosmin hesperidin", "2x500mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg (500 mg) 2 x sehari")).toBe("verified");
+    expect(one("Diosmin hesperidin", "2x500mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg (500 mg) 2 x sehari")).toBe("doseRemoved"); // after the partner (fails safe)
     for (const text of ["parasetamol, untuk dewasa 500 mg", "parasetamol, pada dewasa 500 mg", "parasetamol. Pemberian awal 500 mg", "parasetamol, pagi hari 500 mg"]) expect(one("Parasetamol", "3x500mg", `Pneumonia: ${text}`)).toBe("verified");
   });
   it("never takes a number of a slash group, a partner's strength or a strength after another drug name", () => {
@@ -122,9 +122,25 @@ describe("clinical evidence gate", () => {
     expect(one("Amoxicillin", "3x400mg", "Pneumonia: amoksisilin 500 mg ibuprofen 400 mg")).toBe("doseRemoved");
     expect(one("Pilokarpin", "2x0,25%", "Pneumonia: 9 pilokarpin 1. tts mata 2% 2 btl/bulan. 10 timolol Dapat diberikan di FPKTP. 1. tts mata 0,25% 2 btl/bulan.")).toBe("doseRemoved");
     expect(one("Travoprost", "1x0,004%", "Pneumonia: 11 travoprost Hanya untuk pasien yang tidak memberikan respons dengan timolol. 1. tts mata 0,004% 1 btl/bulan.")).toBe("verified");
-    expect(one("Kloksasilin", "4x500mg", "Pneumonia: Kloksasilin/Dikloksasilin 4 x 250-500 mg oral")).toBe("verified");
+    expect(one("Kloksasilin", "4x500mg", "Pneumonia: Kloksasilin/Dikloksasilin 4 x 250-500 mg oral")).toBe("doseRemoved"); // a slash alternative may have its own dose (fails safe)
     expect(one("Karbogliserin", "3x2-3 tetes", "Pneumonia: (Karbogliserin / Gliserin 10% atau tetes telinga Natrium Dokusat 0.5%) 3 x 2-3 tetes sehari")).toBe("verified");
     for (const text of ["seftriakson, untuk pasien rawat inap: 1-2 g", "seftriakson, mula-mula 2 g", "seftriakson, nyeri ringan-sedang, 2 g"]) expect(one("Seftriakson", "1x2g", `Pneumonia: ${text}`)).toBe("verified");
+  });
+  it("takes a strength only for the drug named last before it; any unknown name fails safe", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Rifampisin", "1x300mg", "Pneumonia: rifampisin, INH 300 mg")).toBe("doseRemoved");
+    expect(one("Zidovudin", "2x150mg", "Pneumonia: zidovudin bila Hb normal, lamivudin 150 mg")).toBe("doseRemoved");
+    expect(one("Metformin", "1x5mg", "Pneumonia: metformin, bila gagal glibenklamid 5 mg")).toBe("doseRemoved");
+    expect(one("Metformin", "1x5mg", "Pneumonia: metformin 500 mg dengan glibenklamid 5 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x50mg", "Pneumonia: parasetamol 500 mg dengan kafein 50 mg")).toBe("doseRemoved");
+    expect(one("Simvastatin", "1x40mg", "Pneumonia: simvastatin malam hari, atorvastatin 40 mg")).toBe("doseRemoved");
+    expect(one("Ambroksol", "3x15mg", "Pneumonia: ambroksol atau dekstrometorfan 15 mg")).toBe("doseRemoved");
+    expect(one("Magnesium sulfat", "1x1g", "Pneumonia: magnesium sulfat loading, kalsium glukonat 1 g bila toksik")).toBe("doseRemoved");
+    expect(one("Isosorbid dinitrat", "1x0,4mg", "Pneumonia: isosorbid dinitrat/nitrogliserin 0,4 mg SL")).toBe("doseRemoved");
+    expect(one("Salbutamol", "4 puff", "Pneumonia: salbutamol 2 puff atau ipratropium 4 puff")).toBe("doseRemoved");
+    expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson (diberikan bila alergi penisilin) 2 g IV")).toBe("verified");
+    expect(one("Metformin", "1x2.000mg", "Pneumonia: metformin 500 mg, dinaikkan hingga 2.000 mg/hari")).toBe("verified");
+    expect(one("Budesonid", "1x0,25mg/mL", "Pneumonia: 2 budesonid 1. serb ih 200 mcg/dosis* Asma persisten berat: 2 tbg/bulan. Untuk rumatan asma (tidak untuk serangan asma akut). 2. cairan ih 0,25 mg/mL")).toBe("verified");
   });
   it("does not take a daily total as the amount of each of several doses", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
@@ -139,6 +155,8 @@ describe("clinical evidence gate", () => {
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg dibagi dalam 3 dosis.")).toBe("doseRemoved");
     expect(one("Kolkisin", "1x3mg", "Pneumonia: kolkisin 3 mg sekali sehari.")).toBe("verified");
     expect(one("Kolkisin", "1mg tiap 8 jam", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1mg q8h", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1mg tid", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
     expect(one("Kolkisin", "1mg tiap 24 jam", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("verified");
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg dalam 24 jam.")).toBe("doseRemoved");
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hr.")).toBe("doseRemoved");

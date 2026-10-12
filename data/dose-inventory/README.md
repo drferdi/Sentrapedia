@@ -11,9 +11,6 @@ of the main checkout (bytes unchanged). Not clinician reviewed. Source typos are
 | `iso_gap_fill.json` | 120 rows from ISO Indonesia Vol. 53 (2021) for 19 groups: general per-drug doses, not first-line regimens |
 | `build_inventory.py` | Rebuilds `inventory.json` |
 
-The `drug` names of the two `*_doses_verified.json` files also feed `src/lib/theoracle-drug-words.json` (with FORNAS generic
-entries; `node scripts/build-drug-words.mjs`), the drug-name words the evidence gate uses to end a dose window. Not clinician reviewed either.
-
 `build_inventory.py` reads `oracle-ii/knowledge_base/json/` and Gaffer's legacy `penyakit.json` next to
 itself. Neither is in this branch (`penyakit.json` is kept untracked on purpose: some ICD-10 codes are
 wrong), so it only reruns where both exist. Details: `.agents/HANDOFF.md`, sections of 2026-10-11 18:10-19:00.

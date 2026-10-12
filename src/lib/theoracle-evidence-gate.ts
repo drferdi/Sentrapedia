@@ -1,7 +1,6 @@
 import type { MiraTherapy } from "./mira/contract";
 import { validTheOracleGrounding, type TheOracleGroundingBundle } from "./theoracle-grounding-types";
 import { referenceIncludes, theOracleDiseases } from "./theoracle";
-import drugWords from "./theoracle-drug-words.json";
 
 export type GateStatus = "verified" | "doseRemoved" | "removed";
 // `dose` (and `drug`) are the raw model strings, kept for audit only; never display them.
@@ -37,7 +36,8 @@ const UNITS_PER_DOSE = new RegExp(String.raw`\d+\s*[x×]\s*${TABLETS}|(?:^|[^\d.
 // A passage doses with a strength when one of its occurrences is not followed, within 80 characters, by a multi-tablet dose;
 // a tablet or capsule count is itself the dose.
 const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
-// Only a strength inside [from, to) counts; the tablet check still reads on past `to` ("Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet").
+// Only a strength the drug owns counts (`spans`, see `owned`); the tablet check reads the whole passage ("Diosmin 450 mg + Hesperidin
+// 50 mg 3 x 2 tablet").
 // A range counts only as the drug's own first strength: "parasetamol 500 mg; ibuprofen 200-400 mg" does not dose parasetamol 300 mg.
 const FIRST_STRENGTH = new RegExp(STRENGTH.source, "i");
 // A daily total ("1 mg/hari", "0,5-1,5 mg per hari", "1 mg sehari", "/kgBB/24 jam", "dibagi dalam 3 dosis", "dosis harian 1 mg",
@@ -51,8 +51,8 @@ const DAILY = (text: string, from: number, at: number, end: number) => {
   return /hari|24\s*jam/i.test(tail) || /^\s*(?:(?:sehari|per\s*hari)(?!\s*\d+\s*(?:[x×]|kali))|,?\s*(?:dibagi|terbagi)|\/\s*hr\b|dalam\s*24\s*jam)/i.test(text.slice(end + tail.length))
     || (/(?:sehari|harian|per\s*hari)\s*:?\s*$/i.test(before) && !/\d\s*(?:[x×]|kali)\s*sehari\s*:?\s*$/i.test(before));
 };
-const doses = (pattern: RegExp, text: string, from = 0, to = text.length, several = false) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
-  .some(m => m.index >= from && m.index + m[0].length <= to && (m[1] === undefined || (inRange(pattern, m) && !FIRST_STRENGTH.test(text.slice(from, m.index))))
+const doses = (pattern: RegExp, text: string, from: number, spans: [number, number][], several = false) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
+  .some(m => spans.some(([a, b]) => m.index >= a && m.index < b) && (m[1] === undefined || (inRange(pattern, m) && !FIRST_STRENGTH.test(text.slice(from, m.index))))
     && !(several && DAILY(text, from, m.index, m.index + m[0].length) && !FREQUENCY_BEFORE.test(text.slice(from, m.index)))
     && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
 // A single dose strength may also match a source range of the same unit and per-kg form ("6 mg" in "3 x 6-12 mg"); `inside`
@@ -81,62 +81,58 @@ function spell(word: string): string {
 const tokens = (text: string) => text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z]+/).filter(Boolean).map(spell);
 const names = (drug: string) => tokens(drug).filter(word => word.length >= 4);
 const mentions = (passage: string[], drug: string) => { const wanted = names(drug); return wanted.length > 0 && wanted.every(word => passage.includes(word)); };
-// A strength belongs to the drug it follows: the 200 characters after each mention of the drug's last name word ("dinitrat",
-// not "isosorbid"), cut at the next lettered item ("b." or "B.", not the unit of "2 g.") or bullet. So "a. zidovudin 300 mg
-// b. lamivudin 150 mg" does not dose lamivudin 300 mg, while FORNAS forms ("1. tab 5 mg"), a dewasa; anak split and a
-// combination's shared count ("450 mg + Hesperidin 50 mg 3 x 2 tablet") stay.
+// A drug's window is the 200 characters after each mention of its first name word, cut at the next lettered item ("b." or "B.",
+// not the unit of "2 g.") or bullet: "a. zidovudin 300 mg b. lamivudin 150 mg" does not dose lamivudin 300 mg.
 const OWN_END = /(?:^|(?<!\d)\s)[A-Za-z][.)]\s|[•]|\n\s*-/;
-// It also ends at a cut point (";", ",", newline, sentence end, "+", or a "/" right after a unit as in "300 mg/lamivudin") when a
-// word between it and the next strength is not a population, phase, form, route, timing or function word or one of the drug's
-// own name words. An unknown word cuts (fails safe): "dewasa 500 mg; anak 250 mg", "500 mg + asam klavulanat 125 mg" and "dapat
-// dinaikkan sampai 40 mg" stay one window; "; natrium bikarbonat 25 mg", ", dilanjutkan sefiksim 200 mg", "+ lamivudin 300 mg"
-// and ", INH 300 mg" do not. The text right after the name is not checked, since a FORNAS restriction precedes the form, so two
-// names with no cut point between them ("Karbogliserin / Gliserin 10% ... 3 x 2-3 tetes") share one window. The window also ends
-// at the drug's next mention: "isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg".
-const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "dosis", "maks", "maksimal", "maksimum", "awal", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "mulai", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "bb", "kgbb", "kg", "mg", "mcg", "ml", "iu", "unit", "gram", "juta", "ribu", "mmol", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "tunggal", "asam", "x", "serta", "pasien", "rawat", "inap", "jalan", "mula", "nyeri", "ringan", "sedang",
+// Within it a strength belongs to the drug whose name came last before it. A word that is not a known population, phase, form,
+// route, timing, function or unit word (ALLOWED) and not the drug's own name names something else, and the strengths after it are
+// not the drug's until its own name comes back. An unknown word fails safe: "parasetamol 500 mg; ibuprofen 400 mg", "rifampisin,
+// INH 300 mg", "500 mg dengan glibenklamid 5 mg", "isosorbid dinitrat/nitrogliserin 0,4 mg" and "kalsium glukonat 1 g" do not dose
+// the first drug, while "dewasa 500 mg; anak 250 mg" and "dapat dinaikkan sampai 40 mg" do. Three exceptions:
+// - a bracket without a strength right after the name is an alias or note: "Efavirenz (EFV) 600 mg";
+// - a numbered FORNAS form returns the strength to the entry's drug ("... (TR-PB) 1. granula 3 g"), unless a new numbered entry
+//   began ("2 btl/bulan. 10 timolol ... 1. tts mata 0,25%");
+// - after a ")" closing a group opened before the name, a count per administration is the group's: "(Diosmin 450 mg + Hesperidin
+//   50 mg) 3 x 2 tablet", "(Karbogliserin / Gliserin 10% atau ... Dokusat 0.5%) 3 x 2-3 tetes".
+// A model-written combination's other name after a strength, with no new mention of the drug in between, is a partner: neither
+// "Parasetamol/Ibuprofen" 400 mg from "parasetamol 500 mg; ibuprofen 400 mg" nor "Amoxicillin clavulanate" 125 mg from
+// "amoksisilin 500 mg + asam klavulanat 125 mg".
+const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "pasien", "dosis", "maks", "maksimal", "maksimum", "awal", "mula", "mulai", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "mnt", "detik", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "serta", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "rawat", "inap", "jalan", "nyeri", "ringan", "sedang", "tunggal", "bolus", "drip", "pelan", "perlahan", "bb", "kgbb", "kg", "mg", "mcg", "ml", "dl", "iu", "unit", "gram", "juta", "ribu", "mmol", "x", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "gtt", "puff", "semprot", "semprotan", "spray", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "amp", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "prn", "od", "bid", "tid", "qid", "qd", "hs",
+  // salt and ester words, never a drug alone ("klorfeniramin maleat 3 x 4 mg"); natrium, kalium and kalsium are drugs alone
+  "maleat", "mesilat", "mesylate", "besilat", "tartrat", "suksinat", "hidroklorida", "hcl", "hidrobromida", "sulfat", "fosfat", "sitrat", "asetat", "laktat", "glukonat", "klorida", "trihidrat", "monohidrat", "dihidrat", "propionat", "dipropionat", "valerat", "asetonid", "furoat", "dekanoat", "palmitat", "trometamol",
+  // more forms and insulin regimen words
+  "pasta", "losion", "lotion", "bedak", "sampo", "ovula", "solusio", "inhaler", "nebulisasi", "patch", "transdermal", "basal", "prandial",
   // FORNAS form abbreviations ("1. tts mata 0,25%", "1. tab sal selaput 5 mg", "2. cairan ih 0,25 mg/mL")
   "tts", "mata", "telinga", "hidung", "sal", "salut", "selaput", "enterik", "serb", "cairan", "sir", "susp", "supp", "lar", "aerosol", "nebul", "film", "lepas", "lambat", "kunyah", "dispersibel", "btl", "tbg"].map(spell));
-const CUT = /;|,(?!\d)|\n|(?<!\d)\.\s|\+|\(|\b(?:atau|dan|serta)\b|(?<=\d\s*(?:mg|mcg|g|ml|iu|%))\s*\/(?!\s*(?:\d|kg|hari|ml|m2|dosis|kali|jam|menit|mnt|tab|kaps|vial|amp|dl\b|l\b))/gi;
-const CUT_ONE = new RegExp(CUT.source, "i");
-// Cut points before the drug's first strength are FORNAS restriction prose ("untuk sistitis ... atau profilaksis ... (TR-PB)
-// 1. granula 3 g") or a bracketed alias ("Efavirenz (EFV) 600 mg"); there only another drug name (below) ends the window.
-// A partner after "+", "atau", "dan" or "serta" has its strengths masked up to a hard cut point ("+ Hesperidin 50 mg atau
-// 100 mg"); a count per administration after it is shared: "(Karbogliserin / Gliserin 10% atau ... Natrium Dokusat 0.5%)
-// 3 x 2-3 tetes", "Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet".
-const PARTNER_END = /;|\n|(?<!\d)\.\s|\(|\+/;
+const ALIAS = /^\s*\([^()\d]{0,60}\)/;
+const FORNAS_FORM = /(?<![\d.,])\d{1,2}\.\s/g;
+const ENTRY = /(?:^|\s)\d{1,3}\s+$/;
 const SHARED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?|tetes|gtt|puff|semprotan|semprot|spray)$/i;
-// Drug-name words (PNPK, PPK and FORNAS names; scripts/build-drug-words.mjs). One such word that is not the drug's own ends the
-// window when a strength follows it before the next cut point, cut point or not before it ("amoksisilin 500 mg ibuprofen 400 mg",
-// a pdftotext table row), or when it opens a numbered FORNAS entry ("2 btl/bulan. 10 timolol"). Another drug named in a FORNAS
-// restriction ("respons dengan timolol. 1. tts mata 0,004%") and a slash alias ("Kloksasilin/Dikloksasilin 4 x 250-500 mg") do not.
-// A name missing from the list is not caught here; the cut-point rule above still applies to it.
-const DRUGS = new Set(drugWords.words.map(spell));
-// Masked strengths become spaces in place. A combination partner after "+", and a model-written combination's other name after
-// the first strength ("Parasetamol/Ibuprofen" against "parasetamol 500 mg; ibuprofen 400 mg"), have their strengths masked up to
-// the next cut point; a tablet count stays, so "Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet" doses diosmin 3 x 2 tablet.
-const ownEnd = (rest: string, own: string[], partners: string[]) => {
-  const again = [...rest.matchAll(/\p{L}+/gu)].find(m => tokens(m[0]).includes(own[0]))?.index ?? -1;
-  const masks: [number, number][] = [];
-  const nextCut = (at: number, cut = CUT_ONE) => { const i = rest.slice(at).search(cut); return i < 0 ? rest.length : at + i; };
-  const mask = (a: number) => { const b = nextCut(a + 1, PARTNER_END); for (const s of rest.slice(a, b).matchAll(STRENGTH)) if (!SHARED.test(s[3])) masks.push([a + s.index, a + s.index + s[0].length]); };
-  const opening = rest.search(FIRST_STRENGTH);
-  let end = Math.min(...[rest.search(OWN_END), again].filter(i => i >= 0), rest.length);
-  for (const m of rest.matchAll(CUT)) {
-    if (m.index >= end) break;
-    if (m.index < opening) continue;
-    const after = rest.slice(m.index + m[0].length);
-    const strength = after.match(FIRST_STRENGTH);
-    if (!strength || !tokens(after.slice(0, strength.index)).some(word => word.length >= 2 && !ALLOWED.has(word) && !own.includes(word))) continue;
-    if (!/^(?:\+|atau|dan|serta)$/i.test(m[0])) { end = m.index; break; }
-    mask(m.index);
+const ownedSpans = (win: string, own: string[], partners: string[]) => {
+  const alias = win.match(ALIAS)?.[0].length ?? 0;
+  const strengths = [...win.matchAll(STRENGTH)];
+  const events = [
+    ...strengths.map(m => ({ at: m.index, kind: "strength", m })),
+    ...[...win.matchAll(/\p{L}+/gu)].filter(w => w.index >= alias && !strengths.some(s => w.index >= s.index && w.index < s.index + s[0].length)).map(m => ({ at: m.index, kind: "word", m })),
+    ...[...win.matchAll(FORNAS_FORM)].map(m => ({ at: m.index, kind: "form", m })),
+    ...[...win.matchAll(/[()]/g)].filter(m => m.index >= alias).map(m => ({ at: m.index, kind: "bracket", m })),
+  ].sort((a, b) => a.at - b.at);
+  const spans: [number, number][] = [];
+  let owner = "self", entry = false, depth = 0, dosed = false, mentioned = false;
+  for (const { at, kind, m } of events) {
+    if (kind === "strength") {
+      if (owner === "self" || (owner === "group" && SHARED.test(m[3]))) spans.push([at, at + m[0].length]);
+      dosed = true; mentioned = false;
+    } else if (kind === "form") { if (!entry) owner = "self"; }
+    else if (kind === "bracket") { if (m[0] === "(") depth++; else if (depth) depth--; else owner = "group"; }
+    else {
+      const words = tokens(m[0]).filter(word => word.length >= 2);
+      if (words.includes(own[0])) { owner = "self"; mentioned = true; }
+      else if (words.some(word => partners.includes(word))) owner = dosed && !mentioned ? "other" : "self";
+      else if (words.some(word => !own.includes(word) && !ALLOWED.has(word))) { owner = "other"; entry ||= ENTRY.test(win.slice(0, at)); }
+    }
   }
-  for (const w of rest.slice(0, end).matchAll(/\p{L}+/gu)) {
-    if (!tokens(w[0]).some(t => DRUGS.has(t) && !own.includes(t) && !ALLOWED.has(t)) || /\p{L}\s*\/\s*$/u.test(rest.slice(0, w.index))) continue;
-    if (rest.slice(w.index, nextCut(w.index + w[0].length)).search(FIRST_STRENGTH) >= 0 || /(?:^|\s)\d{1,3}\s+$/.test(rest.slice(0, w.index))) { end = w.index; break; }
-  }
-  const first = rest.slice(0, end).search(FIRST_STRENGTH);
-  if (first >= 0) for (const w of rest.slice(first, end).matchAll(/\p{L}+/gu)) if (tokens(w[0]).some(t => partners.includes(t))) mask(first + w.index);
-  return { end, masks };
+  return spans;
 };
 // The window opens after the drug's first name word, and only where the clause also holds its other name words, before or after
 // it: "natrium diklofenak 50 mg" and "amoksisilin 500 mg + asam klavulanat" dose; the "isosorbid" of "; isosorbid mononitrat"
@@ -147,11 +143,11 @@ const owned = (text: string, drug: string) => {
   const partners = rest.filter(word => !ALLOWED.has(word));
   return [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).includes(first)).flatMap(m => {
     const from = m.index + m[0].length;
-    const { end, masks } = ownEnd(text.slice(from, from + 200), own, partners);
-    const to = from + end;
+    const window = text.slice(from, from + 200);
+    const to = from + (window.search(OWN_END) < 0 ? window.length : window.search(OWN_END));
     const clause = tokens(text.slice(Math.max(0, m.index - 60), m.index).split(/[;,\n]|\.\s/).at(-1) + " " + text.slice(from, to));
-    const masked = masks.reduce((t, [a, b]) => t.slice(0, from + a) + " ".repeat(b - a) + t.slice(from + b), text);
-    return rest.every(word => clause.includes(word)) ? [{ from, to, text: masked }] : [];
+    const spans = ownedSpans(text.slice(from, to), own, partners).map(([a, b]): [number, number] => [from + a, from + b]);
+    return rest.every(word => clause.includes(word)) ? [{ from, spans }] : [];
   });
 };
 // Words that do not single out one disease: qualifiers, function words, and any word in three or more catalog names (demam, akut, jantung).
@@ -236,9 +232,9 @@ export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBund
     const named = naming(r.drug);
     if (!named.length) return { drug: r.drug, dose: r.dose, status: "removed", evidenceIds: [] };
     const patterns = strengths(r.dose + " " + r.drug, true, true);
-    // "3x1mg", "2-3x2%", "1mg 3 kali sehari", "1mg x 3" and "1mg tiap 8 jam" are several doses; the "x3" of "1x3g" is not a frequency.
-    const several = [...r.dose.matchAll(/(?<![\d.,])(\d+)\s*(?:[x×]|kali)|[x×]\s*(\d+)(?![\d.,]*\s*[a-zµμ%])|tiap\s*(\d+)\s*jam/gi)].some(m => m[3] ? Number(m[3]) < 24 : Number(m[1] ?? m[2]) >= 2);
-    const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to, text }) => patterns.every(pattern => doses(pattern, text, from, to, several)))) : [];
+    // "3x1mg", "2-3x2%", "1mg 3 kali sehari", "1mg x 3", "1mg tiap 8 jam", "q8h" and "tid" are several doses; the "x3" of "1x3g" is not a frequency.
+    const several = /\b(?:bid|tid|qid|bd)\b/i.test(r.dose) || [...r.dose.matchAll(/(?<![\d.,])(\d+)\s*(?:[x×]|kali)|[x×]\s*(\d+)(?![\d.,]*\s*[a-zµμ%])|(?:tiap\s*|q)(\d+)\s*(?:jam|h)\b/gi)].some(m => m[3] ? Number(m[3]) < 24 : Number(m[1] ?? m[2]) >= 2);
+    const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, spans }) => patterns.every(pattern => doses(pattern, p.text, from, spans, several)))) : [];
     return dosing.length ? { drug: r.drug, dose: r.dose, status: "verified", evidenceIds: dosing.map(p => p.id) } : { drug: r.drug, dose: r.dose, status: "doseRemoved", evidenceIds: named.map(p => p.id) };
   });
   const kept = therapy.regimen.filter((_, i) => drugs[i].status !== "removed");
