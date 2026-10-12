@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateTherapy, unstrength } from "../src/lib/theoracle-evidence-gate";
+import { gateEvidence, gateTherapy, unstrength } from "../src/lib/theoracle-evidence-gate";
 import { THEORACLE_GROUNDING_CAPABILITY, type TheOracleGroundingBundle } from "../src/lib/theoracle-grounding-types";
 import type { MiraTherapy } from "../src/lib/mira/contract";
 
@@ -23,6 +23,16 @@ describe("clinical evidence gate", () => {
   it("reads an English ch as the Indonesian k", () => {
     const { report } = gateTherapy(therapy([drug("Chlorpheniramine", "3x4mg"), drug("Chloramphenicol", "4x500mg")]), bundle("Pneumonia: klorfeniramin maleat 3 x 4 mg; kloramfenikol 4 x 500 mg."), pneumonia);
     expect(report.drugs.map(d => d.status)).toEqual(["verified", "verified"]);
+  });
+  it("verifies a targeted dose from a diagnosis passage, each passage once", () => {
+    const tx = bundle("Pneumonia: amoksisilin diberikan oral.");
+    const dx = bundle("Pneumonia: amoksisilin diberikan oral.", "Pneumonia: amoksisilin 500 mg 3 kali sehari.");
+    const merged = gateEvidence(tx, dx);
+    expect(merged?.evidence.map(e => e.evidenceId)).toEqual(["E1", "E2"]);
+    expect(gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), tx, pneumonia).report.drugs[0].status).toBe("doseRemoved");
+    expect(gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), merged, pneumonia).report.drugs[0]).toMatchObject({ status: "verified", evidenceIds: ["E2"] });
+    expect(gateEvidence(undefined, dx)).toBe(dx);
+    expect(gateEvidence(tx, { nope: true })).toBe(tx);
   });
   it("blanks a dose whose strength is not in a passage naming the drug", () => {
     const { therapy: out, report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Amoksisilin 250 mg untuk anak."), pneumonia);

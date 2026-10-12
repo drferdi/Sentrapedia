@@ -1,5 +1,5 @@
 import type { MiraTherapy } from "./mira/contract";
-import type { TheOracleGroundingBundle } from "./theoracle-grounding-types";
+import { validTheOracleGrounding, type TheOracleGroundingBundle } from "./theoracle-grounding-types";
 import { referenceIncludes, theOracleDiseases } from "./theoracle";
 
 export type GateStatus = "verified" | "doseRemoved" | "removed";
@@ -87,6 +87,14 @@ const tidy = (text: string) => text.replace(STRIP, "")
 // Repeats until nothing changes: a removal can bring a leftover number next to a leftover unit ("3 (500 mg) kapsul"),
 // and STRIP matches every strength, so the fixed point holds none.
 export const unstrength = (text: string): string => { const next = tidy(text); return next === text ? text : unstrength(next); };
+
+// The gate reads the therapy passages and then the diagnosis passages of the same case, each passage once: a dose the
+// diagnosis retrieval found (tenofovir 300 mg for HIV) is evidence too, and both bundles are cited with the draft.
+export function gateEvidence(therapyGrounding: unknown, grounding: unknown): TheOracleGroundingBundle | undefined {
+  const tx = validTheOracleGrounding(therapyGrounding) ? therapyGrounding : undefined;
+  const dx = validTheOracleGrounding(grounding) ? grounding : undefined;
+  return tx && dx ? { ...tx, evidence: [...tx.evidence, ...dx.evidence.filter(e => !tx.evidence.some(t => t.evidenceId === e.evidenceId))] } : tx ?? dx;
+}
 
 export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBundle | undefined, diagnosis: { icd10: string; label: string } | undefined): { therapy: MiraTherapy | undefined; report: EvidenceGateReport } {
   const forDiagnosis = therapy.forDiagnosis;
