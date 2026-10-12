@@ -1,7 +1,7 @@
 # Dose gate audit, phase 2-3 (2026-10-12)
 
 Plan: `docs/plans/active/Audit_actions.md` (main checkout, untracked). Branch `feat/sentrapedia-dify-theoracle`, gate at `0a708b4e`.
-Status: **REQUIRES FURTHER CORRECTION.** Classification done offline; no gate or retrieval code changed; live baseline and the 10-disease benchmark not done.
+Status: **CORRECTIONS APPLIED; DOSE WINDOW AT A DESIGN DECISION; LIVE MEASUREMENT BLOCKED.** Sections 1-4 are the classification as found (gate at `0a708b4e`). Gaffer approved all seven corrections; section 6 lists what was applied and the offline replay after each. The live eval is blocked by OpenRouter credit (HTTP 402), not by the gate.
 
 ## 1. Data and method
 
@@ -61,6 +61,65 @@ The harness scripts are copied to `harness/` (`replay.test.ts.txt` is renamed so
 
 ## 5. Not done
 
-- Phase 2 live reproduction (blocked by the breaker; see change 6).
-- Phase 4, the 10-disease external benchmark (needs web research).
+- Phase 2 live reproduction and the live after-measurement: blocked by OpenRouter credit (section 6).
+- Phase 4, the 10-disease external benchmark: section 7.
 - Phase 6: no new measurement. The 2026-10-11 report already attributes the latency rise to the second MIRA call (`mira_tx` p50 about 2.0 s); today's partial runs agree (p50 4.7 s).
+
+## 6. Corrections applied (2026-10-12)
+
+Each change was written test-first, then replayed on the same 122 replies (`.runtime/audit/items-1011.json`), and committed only when the replay showed no wrong-disease or wrong-drug verification. Two Opus reviews (of the first five gate commits, then of `d6e0768a`) found range and window leaks, which were fixed in `d6e0768a` and `ee5bc240`.
+
+| # | Commit | Change |
+|---|---|---|
+| 1 | `27b7f108` | `spell`: English "ch" reads as Indonesian "k" (chlorpheniramine = klorfeniramin) |
+| 2 | `86a8cec7` | Targeted gate reads therapy and diagnosis passages, each once (`gateEvidence`, in gateway, client and presentation) |
+| 7 | `5e31f714` | A strength verifies only the drug it follows, inside the drug's own item (lettered item, bullet, dash) |
+| 3 | `604e286c` | A single model strength verifies inside a source range of the same unit and per-kg form |
+| 4 | `f3966c0f` | ODHA = HIV; ICD-10 2010 I84 = catalog K64 (hemoroid) |
+| 6 | `12efd483` | MIRA breaker counts a failed part once, not each failed parallel copy; the provider error type and HTTP status are logged |
+| 5 | `4d902a4d` | Fast therapy prompt: every dose states its amount or concentration, never a frequency alone; tablet count, not tablet content |
+| review | `d6e0768a` | "0,125" is a decimal, not thousands; a "juta" multiplier covers both ends or none; a range counts only as the drug's own first strength; the window anchors after the full name; "B." cuts, "2 g." does not |
+| review 2 | `ee5bc240` | Window also ends at a ";" / "," / sentence end whose next word is not a population, phase, form, route or timing word; the window opens after the first name word only where the clause holds the other name words (salt-first "natrium diklofenak" doses, "; natrium bikarbonat" does not); a daily total ("mg/hari", "sehari", "/24 jam") does not verify each of several doses unless the source writes its own frequency before it |
+| review 3 | `16e83955` | Rule inverted: after a cut point (";", ",", newline, sentence end, "+", or "/" right after a unit before a non-unit word) every word up to the next strength must be a known population, phase, form, route, timing, function or salt word, a FORNAS form abbreviation, or the drug's own name, else the window ends (fails safe). A "+" partner is masked, not cut, so a combination's shared tablet count still reads. The window ends at the drug's next mention. The model frequency is read as 3x, 3 kali or x 3; a source frequency before a daily total must be 2 or more; "dosis harian", "sehari 1 mg" and "dibagi/terbagi" count as daily |
+
+Replay, verified drugs (legacy / targeted), same 122 replies:
+
+| Gate | Legacy | Targeted |
+|---|---:|---:|
+| `0a708b4e` (sections 1-4) | 42 | 42 |
+| after 1-4, 7 and the first review fixes (`d6e0768a`) | 49 | 49 |
+| after review 2 (`ee5bc240`) | 49 | 48 |
+| after review 3 (`16e83955`) | 49 | 48 |
+
+The one drop at `ee5bc240` is a correct block: amoxicillin-clavulanate 3x250-500mg for impetigo had been verified by the impetigo note's "Kloksasilin/Dikloksasilin 4 x 250-500 mg" (another drug's range). PERDOSKI states "Amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari", but those chunks do not name impetigo, so they are not "about" the diagnosis. Lamivudin 1 x 300 mg (section 3, item 0) is now dose-removed. Gate tests: 88 (`tests/theoracle-evidence-gate.test.ts`); MIRA tests 180 passed, 1 skipped.
+
+Fail-safe limits kept on purpose (dose blanked, never wrong): a strength before the drug name; "600.000 - 1,2 juta IU" (multiplier on one end); "omeprazol untuk H. pylori 20 mg" (the capital "H." reads as an item letter); FORNAS rows whose restriction text has a sentence end before the next numbered form (budesonid 0,25 mg/mL keeps its PAPDI citation only); a "+" partner mask that also covers the first drug's own strength ("DHA + Piperakuin (DHP) tiap tablet mengandung 40 mg ...", still verified from another passage). Residual open (the known limit of a word-list window): two drugs with no cut point between them, such as "X 500 mg dan Y 400 mg" or "Karbogliserin / Gliserin 10% ... 3 x 2-3 tetes" (this one shares a dose on purpose), and "1,250-2,500 mg" read as thousands (the exact path shares that ambiguity). Section 3 items 1-4 (concentration as dose, strength list as regimen, frequency and duration unchecked, population unchecked) are unchanged.
+
+**Review 4 (`16e83955`): FIX, circuit breaker reached.** The word-list rule closed every earlier input, but the reviewer found three leak categories that a word list cannot close:
+- slash-positional combinations ("tenofovir/lamivudin/efavirenz 300/300/600 mg" verifies tenofovir 600 mg; "zidovudin 300 mg/150 mg lamivudin" verifies zidovudin 150 mg);
+- a model-written combined name ("Parasetamol/Ibuprofen" 3x400mg verifies from "parasetamol 500 mg; ibuprofen 400 mg", because "ibuprofen" counts as the drug's own name);
+- a "+" partner with two strengths ("Diosmin 450 mg + Hesperidin 50 mg atau 100 mg" verifies diosmin 100 mg).
+
+It also found fixable leaks: "(", "atau", "dan" not being cut points ("kotrimoksazol 2 x 480 mg (trimetoprim 80 mg)", "parasetamol 500 mg atau ibuprofen 400 mg"); natrium and kalium in the allowed list; and "tiap 8 jam", "dalam 24 jam" and "/hr" not being read. Indication words ("untuk pasien rawat inap", "nyeri ringan-sedang") blank correct doses, which is an open-ended tail. Gaffer was asked for the next design step; no change followed review 4.
+
+**Live eval.** A third live run after the fixes (`live-after-targeted.*`) reached 8/61 cases (8 verified, 2 dose removed among them; $0.07). The new engine logging shows the cause of all three failed runs: the model provider returned `APIStatusError 402` (OpenRouter credit exhausted). The rate-limit reading in section 1 was wrong; the breaker fix (change 6) stands, because failed parallel copies of a part that succeeded used to count toward the 3 consecutive failures that pause model calls for 60 s. The live before/after, and the effect of change 5 (prompt), wait for Gaffer to top up the OpenRouter credit.
+
+## 7. Phase 4: the 10-disease benchmark against external sources
+
+Local half (`.runtime/audit/phase4_corpus.py`): every disease has a dedicated Gaffer-approved document in `theoracle/sources/tatalaksana/` (added in `8ca134f1`, 2026-10-11) and at least one disease note. External half: two research agents, capped at 5 fetched pages each by Jev, read the Kemenkes PNPK PDFs for asphyxia, impacted tooth, osteosarcoma and Hirschsprung in full, IDSA/SIS 2010 in full, and the rest from search snippets. The PPK FKTP (KMK 1186/2022) did not load (DNS failure, 404). Dose claims below quote the source.
+
+| Disease | Local document | External reference | Verdict |
+|---|---|---|---|
+| Neonatal asphyxia | Epinefrin 0,01-0,03 mg/kg IV/UVC/IO for HR <60 after effective ventilation and compressions, repeat every 3-5 min; PPV 40-60/min; 3:1 | PNPK KMK 214/2019: "Epinefrin 1:10.000 ... intravena atau intraoseus ... 0,1-0,3 mL/kgBB (0,01-0,03 mg/kgBB)"; ETT when IV/IO unavailable 0,5-1 mL/kgBB (0,05-0,1 mg/kgBB); volume 10 mL/kgBB over 5-10 min; ILCOR 2020 agrees | **Dose correct.** Missing: the 1:10.000 concentration and mL/kg, the ETT dose, the volume bolus, initial O2 21-30% below 35 weeks, therapeutic hypothermia referral |
+| Epistaxis | Compression 10-15 min; oxymetazoline 0,05% 1-2 sprays; TXA topical "500 mg/5 mL" example | AAO-HNS 2020 (snippets): compression >=5 min, packing, resorbable packing on anticoagulants; **no drug dose found** | Procedures agree. **Oxymetazoline and TXA doses unverified** (cited to AAO-HNS, which showed none); needs the PPK FKTP |
+| Impacted tooth | Ibuprofen 400 mg q6-8h; parasetamol 500-1.000 mg q6-8h, max 3 g/day; amoksisilin 500 mg q8h only with odontogenic infection | PNPK KMK 777/2022: **no systemic doses**; antibiotics by local pattern, WHO ladder; local anaesthetic maxima (lidokain 2% + epinefrin 7 mg/kgBB) | Doses consistent with ADA dental guidance, not with the PNPK (which has none). Missing: local anaesthetic maxima; general-dentist scope (class 1A only) |
+| Intra-abdominal infection | Seftriakson 2 g IV q24h + metronidazol 500 mg q8-12h; pip-tazo 3,375 g q6h (4,5 g q6h severe); meropenem 1 g q8h; about 4 days after source control | IDSA/SIS 2010: ceftriaxone 1-2 g q12-24h, metronidazole 500 mg q8-12h, pip-tazo 3.375 g q6h; SIS 2017: <=4 days with source control | **Doses within the guideline.** Pip-tazo 4,5 g and meropenem not checked. Missing: pediatric doses (ceftriaxone 50-75 mg/kg/day, metronidazole 30-40 mg/kg/day) |
+| Osteosarcoma | MAP agents named, no doses; refer all suspected cases | PNPK KMK 88/2019: specialist multidisciplinary; WHO pain ladder, no numeric doses | **Agrees** (no executable chemotherapy). Missing: WHO ladder pain guidance |
+| Hirschsprung | NaCl 0,9% rectal irrigation 1-3x/day; metronidazol pediatric by weight and hospital protocol | PNPK KMK 474/2017: irrigation "NaCl 0.9% 10-20 cc/kgBB"; HAEC with sepsis: ampisilin, gentamisin, metronidazol, no doses; prophylactic antibiotics not recommended | Agrees; **no dose to verify.** Missing: irrigation volume 10-20 mL/kgBB; the HAEC triple regimen; no prophylaxis |
+| Pterygium | CMC 0,5% and hypromellose 0,3%, 1-2 drops as needed; steroid only by an ophthalmologist | NHS leaflet, BMJ BP (snippets): lubricants; steroid under ophthalmologist supervision; IOP risk | Agrees. Tear doses are label-level, unverified |
+| Pulpal / periradicular | Ibuprofen 400 mg q6-8h; parasetamol 500-1.000 mg q6-8h; amoksisilin 500 mg q8h 3-7 days for systemic involvement | ADA 2019: no antibiotics for irreversible pulpitis; amoxicillin 500 mg TID 3-7 days when indicated; ADA 2024: ibuprofen 400 mg +- acetaminophen 500 mg | **Doses agree** |
+| Sarcopenia | Protein 1,0-1,5 g/kg/day; no routine drug; vitamin D if deficient | AWGS 2019 diagnosis; Singapore CPG: resistance exercise, protein >=1,0 g/kg/day, vitamin D if <30 ug/L | Agrees |
+| Cerumen impaction | Carbamide peroxide 6,5% 5-10 drops twice daily up to 4 days, over 12 years; irrigation contraindications | AAO-HNS 2017 (snippets): cerumenolytics, no drop counts; OTC label: same carbamide peroxide dose; MSD adds anticoagulants, immunocompromise, diabetes, prior radiation, canal stenosis | **Dose agrees with the label.** Contraindication list shorter than MSD's. The karbogliserin 10% 3 x 2-3 tetes in the other corpus notes is from the PPK FKTP, which did not load |
+
+**No wrong dose was found in the 10 documents.** Six coverage gaps are listed above (asphyxia ETT dose and concentration, Hirschsprung irrigation volume, intra-abdominal pediatric doses, impaction anaesthetic maxima, osteosarcoma pain ladder, cerumen contraindications) and three doses are unverified (oxymetazoline, topical TXA, pip-tazo 4,5 g / meropenem). Changing the documents is a clinical content decision for Gaffer; nothing was edited.
+
