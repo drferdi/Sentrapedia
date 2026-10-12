@@ -77,6 +77,27 @@ describe("clinical evidence gate", () => {
     expect(one("Isosorbid dinitrat", "1x40mg", "Pneumonia: isosorbid dinitrat 5 mg SL; isosorbid mononitrat 30-60 mg.")).toBe("doseRemoved");
     expect(one("Zidovudin", "2x150mg", "Pneumonia, KDT: A. zidovudin 300 mg B. lamivudin 150 mg")).toBe("doseRemoved");
   });
+  it("ends a drug's window where a clause names something else, whatever the salt order", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Parasetamol", "3x300mg", "Pneumonia: parasetamol bila demam; ibuprofen 200-400 mg.")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x400mg", "Pneumonia: parasetamol bila demam; ibuprofen 400 mg.")).toBe("doseRemoved");
+    expect(one("Diklofenak natrium", "1x25mg", "Pneumonia: diklofenak natrium 50 mg; natrium bikarbonat 25 mg.")).toBe("doseRemoved");
+    expect(one("Diklofenak natrium", "1x25mg", "Pneumonia: diklofenak natrium 50 mg, natrium bikarbonat 20-40 mg.")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 1 g, klaritromisin 500 mg.")).toBe("doseRemoved");
+    expect(one("Diklofenak natrium", "2x50mg", "Pneumonia: natrium diklofenak 50 mg 2 kali sehari.")).toBe("verified");
+    expect(one("Amoxicillin clavulanate", "3x500mg", "Pneumonia: amoksisilin 500 mg + asam klavulanat 125 mg 3 kali sehari.")).toBe("verified");
+    expect(one("Parasetamol", "3x250mg", "Pneumonia: parasetamol dewasa 500 mg; anak 250 mg.")).toBe("verified");
+  });
+  it("does not take a daily total as the amount of each of several doses", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 1 mg per hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("verified");
+    expect(one("Parasetamol", "3x500mg", "Pneumonia: parasetamol 500 mg sehari 3 kali.")).toBe("verified");
+    expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 500 mg/8 jam.")).toBe("verified");
+    expect(one("Amoxicillin clavulanate", "3x250-500mg", "Pneumonia: amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari.")).toBe("verified");
+    expect(one("Karbogliserin", "3x2-3 tetes", "Pneumonia: karbogliserin 10% 3 x 2-3 tetes sehari.")).toBe("verified");
+  });
   it("does not cut a drug's window at a single-letter unit", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
     expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson 2 g. Diberikan IV sekali sehari.")).toBe("verified");
@@ -153,8 +174,10 @@ describe("clinical evidence gate fix round 1", () => {
   it("does not verify a plain dose from a per-kg passage, but verifies a per-kg dose", () => {
     const plain = gateTherapy(therapy([drug("Amoxicillin", "3x10mg")]), bundle("Amoksisilin 10 mg/kgBB per hari."), pneumonia);
     expect(plain.report.drugs[0].status).toBe("doseRemoved");
-    const perKg = gateTherapy(therapy([drug("Amoxicillin", "3x10mg/kg")]), bundle("Amoksisilin 10 mg/kgBB per hari."), pneumonia);
+    const perKg = gateTherapy(therapy([drug("Amoxicillin", "3x10mg/kg")]), bundle("Amoksisilin 10 mg/kgBB tiap 8 jam."), pneumonia);
     expect(perKg.report.drugs[0].status).toBe("verified");
+    const daily = gateTherapy(therapy([drug("Amoxicillin", "3x10mg/kg")]), bundle("Amoksisilin 10 mg/kgBB per hari."), pneumonia);
+    expect(daily.report.drugs[0].status).toBe("doseRemoved");
   });
 });
 

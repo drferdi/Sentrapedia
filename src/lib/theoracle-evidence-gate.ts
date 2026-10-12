@@ -39,8 +39,17 @@ const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
 // Only a strength inside [from, to) counts; the tablet check still reads on past `to` ("Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet").
 // A range counts only as the drug's own first strength: "parasetamol 500 mg; ibuprofen 200-400 mg" does not dose parasetamol 300 mg.
 const FIRST_STRENGTH = new RegExp(STRENGTH.source, "i");
-const doses = (pattern: RegExp, text: string, from = 0, to = text.length) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
+// A daily total ("1 mg/hari", "0,5-1,5 mg per hari", "1 mg sehari", "/kgBB/24 jam") is not the amount of each of several doses
+// (`several`, as in 3x1mg), unless the source writes its own frequency before it ("3 x 500 mg/hari", "3 x 2-3 tetes sehari").
+// "500 mg sehari 3 kali" and "500 mg/8 jam" are per dose.
+const FREQUENCY_BEFORE = new RegExp(String.raw`\d\s*(?:[x×]|kali)\s*(?:${NUMBER}${RANGE})?$`, "i");
+const DAILY = (text: string, at: number) => {
+  const tail = text.slice(at).match(new RegExp(`^${PER}`, "i"))![0];
+  return (/hari|24\s*jam/i.test(tail) || /^\s*(?:sehari|per\s*hari)(?!\s*\d+\s*(?:[x×]|kali))/i.test(text.slice(at + tail.length)));
+};
+const doses = (pattern: RegExp, text: string, from = 0, to = text.length, several = false) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
   .some(m => m.index >= from && m.index + m[0].length <= to && (m[1] === undefined || (inRange(pattern, m) && !FIRST_STRENGTH.test(text.slice(from, m.index))))
+    && !(several && DAILY(text, m.index + m[0].length) && !FREQUENCY_BEFORE.test(text.slice(from, m.index)))
     && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
 // A single dose strength may also match a source range of the same unit and per-kg form ("6 mg" in "3 x 6-12 mg"); `inside`
 // holds its value for that pattern, and the range must contain it. Only the dose gets such a pattern, never a safety threshold.
@@ -73,12 +82,24 @@ const mentions = (passage: string[], drug: string) => { const wanted = names(dru
 // b. lamivudin 150 mg" does not dose lamivudin 300 mg, while FORNAS forms ("1. tab 5 mg"), a dewasa; anak split and a
 // combination's shared count ("450 mg + Hesperidin 50 mg 3 x 2 tablet") stay.
 const OWN_END = /(?:^|(?<!\d)\s)[A-Za-z][.)]\s|[•]|\n\s*-/;
-// The name is read without its strength: "Benzatin penisilin G 2,4 juta IU" anchors on "penisilin", not "juta".
-const owned = (text: string, drug: string) => [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).some(word => word === names(unstrength(drug)).at(-1))).map(m => {
-  const from = m.index + m[0].length;
-  const end = text.slice(from, from + 200).search(OWN_END);
-  return { from, to: from + (end < 0 ? Math.min(200, text.length - from) : end) };
-});
+// It also ends at a ";", "," or sentence end whose next word is not a population, phase, form, route or timing word: "dewasa
+// 500 mg; anak 250 mg" stays one window, "diklofenak natrium 50 mg; natrium bikarbonat 25 mg" and "amoksisilin 1 g,
+// klaritromisin 500 mg" do not. "Dapat dinaikkan sampai 40 mg" stays; "dapat diganti eritromisin" does not.
+const QUALIFIERS = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "dosis", "maks", "maksimal", "maksimum", "awal", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "tablet", "kapsul", "kaplet", "sirup", "suspensi", "drop", "tetes", "injeksi", "infus", "salep", "krim", "oral", "intravena", "intramuskular", "subkutan", "diberikan", "sebanyak", "setiap", "tiap", "selama", "sehari", "hari", "minggu", "bulan", "berat", "badan", "usia", "umur", "mulai", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi"]);
+const CLAUSE_END = /(?:;|,(?!\d)|\.(?=\s+\p{Lu}))\s*(?:(?:[Dd]apat|[Bb]isa)\s+)?(\p{L}+)/gu;
+const ownEnd = (rest: string) => Math.min(...[rest.search(OWN_END), ...[...rest.matchAll(CLAUSE_END)].filter(m => m[1].length >= 4 && !QUALIFIERS.has(m[1].toLowerCase())).map(m => m.index)].filter(i => i >= 0), rest.length);
+// The window opens after the drug's first name word, and only where the clause also holds its other name words, before or after
+// it: "natrium diklofenak 50 mg" and "amoksisilin 500 mg + asam klavulanat" dose; the "isosorbid" of "; isosorbid mononitrat"
+// does not open a window for isosorbid dinitrat. The name is read without its strength ("Benzatin penisilin G 2,4 juta IU").
+const owned = (text: string, drug: string) => {
+  const [first, ...rest] = names(unstrength(drug));
+  return [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).includes(first)).flatMap(m => {
+    const from = m.index + m[0].length;
+    const to = from + ownEnd(text.slice(from, from + 200));
+    const clause = tokens(text.slice(Math.max(0, m.index - 60), m.index).split(/[;,\n]|\.\s/).at(-1) + " " + text.slice(from, to));
+    return rest.every(word => clause.includes(word)) ? [{ from, to }] : [];
+  });
+};
 // Words that do not single out one disease: qualifiers, function words, and any word in three or more catalog names (demam, akut, jantung).
 const catalogCounts = new Map<string, number>();
 theOracleDiseases.forEach(d => new Set(tokens(d.nama)).forEach(word => catalogCounts.set(word, (catalogCounts.get(word) ?? 0) + 1)));
@@ -159,7 +180,8 @@ export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBund
     const named = naming(r.drug);
     if (!named.length) return { drug: r.drug, dose: r.dose, status: "removed", evidenceIds: [] };
     const patterns = strengths(r.dose + " " + r.drug, true, true);
-    const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to }) => patterns.every(pattern => doses(pattern, p.text, from, to)))) : [];
+    const several = /(?:^|[^\d.,])(?:[2-9]|\d{2,})\s*[x×]/i.test(r.dose);
+    const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to }) => patterns.every(pattern => doses(pattern, p.text, from, to, several)))) : [];
     return dosing.length ? { drug: r.drug, dose: r.dose, status: "verified", evidenceIds: dosing.map(p => p.id) } : { drug: r.drug, dose: r.dose, status: "doseRemoved", evidenceIds: named.map(p => p.id) };
   });
   const kept = therapy.regimen.filter((_, i) => drugs[i].status !== "removed");
