@@ -37,19 +37,27 @@ const UNITS_PER_DOSE = new RegExp(String.raw`\d+\s*[x×]\s*${TABLETS}|(?:^|[^\d.
 // a tablet or capsule count is itself the dose.
 const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
 // Only a strength inside [from, to) counts; the tablet check still reads on past `to` ("Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet").
+// A range counts only as the drug's own first strength: "parasetamol 500 mg; ibuprofen 200-400 mg" does not dose parasetamol 300 mg.
+const FIRST_STRENGTH = new RegExp(STRENGTH.source, "i");
 const doses = (pattern: RegExp, text: string, from = 0, to = text.length) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
-  .some(m => m.index >= from && m.index + m[0].length <= to && inRange(pattern, m) && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
+  .some(m => m.index >= from && m.index + m[0].length <= to && (m[1] === undefined || (inRange(pattern, m) && !FIRST_STRENGTH.test(text.slice(from, m.index))))
+    && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
 // A single dose strength may also match a source range of the same unit and per-kg form ("6 mg" in "3 x 6-12 mg"); `inside`
 // holds its value for that pattern, and the range must contain it. Only the dose gets such a pattern, never a safety threshold.
 const inside = new WeakMap<RegExp, number>();
-const amount = (value: string) => {
+const scaleOf = (value: string) => /(?:juta|million)$/.test(value) ? 1e6 : /ribu$/.test(value) ? 1e3 : 1;
+// Thousands separators only after a leading 1-9 ("1.200.000"); "0,125" is a decimal. Anything else unreadable is NaN and fails.
+const amount = (value: string, scale = scaleOf(value)) => {
   const digits = value.replace(/\s*(?:juta|ribu|million)$/, "");
-  const scale = /(?:juta|million)$/.test(value) ? 1e6 : /ribu$/.test(value) ? 1e3 : 1;
-  return scale * Number(/^\d{1,3}(?:[.,]\d{3})+$/.test(digits) ? digits.replace(/[.,]/g, "") : digits.replace(",", "."));
+  return scale * Number(/^[1-9]\d{0,2}(?:[.,]\d{3})+$/.test(digits) ? digits.replace(/[.,]/g, "") : digits.replace(",", "."));
 };
+// A multiplier written once covers both ends ("1,2-2,4 juta IU"); a lower end with its own, different multiplier does not count.
 const inRange = (pattern: RegExp, m: RegExpMatchArray) => {
   const value = inside.get(pattern);
-  return m[1] === undefined || (value !== undefined && amount(m[1]) <= value && value <= amount(m[2]));
+  const high = scaleOf(m[2]), low = scaleOf(m[1]);
+  if (value === undefined || (low !== 1 && low !== high)) return false;
+  const [lo, hi] = [amount(m[1], high), amount(m[2], high)];
+  return lo <= hi && lo <= value && value <= hi;
 };
 
 // English and Indonesian spellings of generic names converge: amoxicillin and amoksisilin -> amoksisilin,
@@ -60,11 +68,13 @@ function spell(word: string): string {
 const tokens = (text: string) => text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z]+/).filter(Boolean).map(spell);
 const names = (drug: string) => tokens(drug).filter(word => word.length >= 4);
 const mentions = (passage: string[], drug: string) => { const wanted = names(drug); return wanted.length > 0 && wanted.every(word => passage.includes(word)); };
-// A strength belongs to the drug it follows: the 200 characters after each mention of the drug's first name word, cut at the
-// next lettered item or bullet. So "a. zidovudin 300 mg b. lamivudin 150 mg" does not dose lamivudin 300 mg, while FORNAS
-// forms ("1. tab 5 mg"), a dewasa; anak split and a combination's shared count ("450 mg + Hesperidin 50 mg 3 x 2 tablet") stay.
-const OWN_END = /(?:^|\s)[a-z][.)]\s|[•]|\n\s*-/;
-const owned = (text: string, drug: string) => [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).includes(names(drug)[0])).map(m => {
+// A strength belongs to the drug it follows: the 200 characters after each mention of the drug's last name word ("dinitrat",
+// not "isosorbid"), cut at the next lettered item ("b." or "B.", not the unit of "2 g.") or bullet. So "a. zidovudin 300 mg
+// b. lamivudin 150 mg" does not dose lamivudin 300 mg, while FORNAS forms ("1. tab 5 mg"), a dewasa; anak split and a
+// combination's shared count ("450 mg + Hesperidin 50 mg 3 x 2 tablet") stay.
+const OWN_END = /(?:^|(?<!\d)\s)[A-Za-z][.)]\s|[•]|\n\s*-/;
+// The name is read without its strength: "Benzatin penisilin G 2,4 juta IU" anchors on "penisilin", not "juta".
+const owned = (text: string, drug: string) => [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).some(word => word === names(unstrength(drug)).at(-1))).map(m => {
   const from = m.index + m[0].length;
   const end = text.slice(from, from + 200).search(OWN_END);
   return { from, to: from + (end < 0 ? Math.min(200, text.length - from) : end) };

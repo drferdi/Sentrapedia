@@ -62,6 +62,30 @@ describe("clinical evidence gate", () => {
     expect(one("Betahistin", "3x6mg", "Pneumonia: Betahistin 6 tablet, lalu 12 mg.")).toBe("doseRemoved");
     expect(one("Betahistin", "3x6-8mg", "Pneumonia: Betahistin 3 x 6-12 mg.")).toBe("doseRemoved");
   });
+  it("never reads a decimal comma as thousands or applies a multiplier to one end only", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Digoksin", "1x250mg", "Pneumonia: digoksin 0,125-0,250 mg sekali sehari.")).toBe("doseRemoved");
+    expect(one("Digoksin", "1x0,125mg", "Pneumonia: digoksin 0,125-0,250 mg sekali sehari.")).toBe("verified");
+    expect(one("Amoxicillin", "3x0,500mg", "Pneumonia: amoksisilin 250-750 mg.")).toBe("doseRemoved");
+    expect(one("Benzatin penisilin", "1x600.000IU", "Pneumonia: benzatin penisilin 1,2-2,4 juta IU IM.")).toBe("doseRemoved");
+    expect(one("Benzatin penisilin", "1x2.400IU", "Pneumonia: benzatin penisilin 1,2-2,4 juta IU IM.")).toBe("doseRemoved");
+    expect(one("Benzatin penisilin", "1x1.800.000IU", "Pneumonia: benzatin penisilin 1,2-2,4 juta IU IM.")).toBe("verified");
+  });
+  it("takes a range only as the drug's own first strength, after its full name, at any item letter case", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Parasetamol", "3x300mg", "Pneumonia: parasetamol 500 mg; ibuprofen 200-400 mg.")).toBe("doseRemoved");
+    expect(one("Isosorbid dinitrat", "1x40mg", "Pneumonia: isosorbid dinitrat 5 mg SL; isosorbid mononitrat 30-60 mg.")).toBe("doseRemoved");
+    expect(one("Zidovudin", "2x150mg", "Pneumonia, KDT: A. zidovudin 300 mg B. lamivudin 150 mg")).toBe("doseRemoved");
+  });
+  it("does not cut a drug's window at a single-letter unit", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson 2 g. Diberikan IV sekali sehari.")).toBe("verified");
+    expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson IV (2 g) sekali sehari.")).toBe("verified");
+  });
+  it("blanks a strength written before the drug name (fails safe)", () => {
+    const { report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Pneumonia: berikan 500 mg amoksisilin 3 kali sehari."), pneumonia);
+    expect(report.drugs[0].status).toBe("doseRemoved");
+  });
   it("reads ODHA as HIV and the catalog's K64 for haemorrhoids coded I84", () => {
     const hiv = { icd10: "Z21", label: "Asymptomatic human immunodeficiency virus [HIV] infection status" };
     const art = bundle({ title: "panduan-praktik-klinis.pdf", text: "Terapi ODHA: Efavirenz (EFV) 600 mg sekali sehari." });
