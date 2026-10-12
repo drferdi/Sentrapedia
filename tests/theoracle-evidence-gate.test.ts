@@ -88,11 +88,37 @@ describe("clinical evidence gate", () => {
     expect(one("Amoxicillin clavulanate", "3x500mg", "Pneumonia: amoksisilin 500 mg + asam klavulanat 125 mg 3 kali sehari.")).toBe("verified");
     expect(one("Parasetamol", "3x250mg", "Pneumonia: parasetamol dewasa 500 mg; anak 250 mg.")).toBe("verified");
   });
+  it("ends a drug's window at a combination partner or another drug after any clause start", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Tenofovir", "1x600mg", "Pneumonia: tenofovir 300 mg + lamivudin 300 mg + efavirenz 600 mg")).toBe("doseRemoved");
+    expect(one("Zidovudin", "2x150mg", "Pneumonia: zidovudin 300 mg/lamivudin 150 mg")).toBe("doseRemoved");
+    expect(one("Diosmin", "2x50mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg")).toBe("doseRemoved");
+    expect(one("Seftriakson", "1x200mg", "Pneumonia: seftriakson 1 g IV, dilanjutkan sefiksim 200 mg")).toBe("doseRemoved");
+    expect(one("Metronidazol", "3x250mg", "Pneumonia: metronidazol 500 mg, kemudian sefiksim 250 mg")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x250mg", "Pneumonia: amoksisilin 1 g, injeksi seftriakson 250 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x300mg", "Pneumonia: parasetamol bila demam; dewasa: ibuprofen 200-400 mg")).toBe("doseRemoved");
+    expect(one("Rifampisin", "1x300mg", "Pneumonia: rifampisin 450 mg, INH 300 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x400mg", "Pneumonia: parasetamol 500 mg, dan ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 1 g\nklaritromisin 500 mg")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 1 g. klaritromisin 500 mg")).toBe("doseRemoved");
+    expect(one("Isosorbid dinitrat", "1x20mg", "Pneumonia: isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg")).toBe("doseRemoved");
+    expect(one("Isosorbid dinitrat", "1x5mg", "Pneumonia: isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg")).toBe("verified");
+    expect(one("Diosmin hesperidin", "2x500mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg (500 mg) 2 x sehari")).toBe("verified");
+    for (const text of ["parasetamol, untuk dewasa 500 mg", "parasetamol, pada dewasa 500 mg", "parasetamol. Pemberian awal 500 mg", "parasetamol, pagi hari 500 mg"]) expect(one("Parasetamol", "3x500mg", `Pneumonia: ${text}`)).toBe("verified");
+  });
   it("does not take a daily total as the amount of each of several doses", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 1 mg per hari.")).toBe("doseRemoved");
     expect(one("Kolkisin", "1x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("verified");
+    expect(one("Kolkisin", "1mg 3 kali sehari", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1mg x 3", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 1 x 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin dosis harian 0,5-1,5 mg.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin sehari 0,5-1,5 mg.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg dibagi dalam 3 dosis.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1x3mg", "Pneumonia: kolkisin 3 mg sekali sehari.")).toBe("verified");
+    expect(one("Kolkisin", "3x0,5mg", "Pneumonia: kolkisin 3 kali sehari 0,5 mg.")).toBe("verified");
     expect(one("Parasetamol", "3x500mg", "Pneumonia: parasetamol 500 mg sehari 3 kali.")).toBe("verified");
     expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 500 mg/8 jam.")).toBe("verified");
     expect(one("Amoxicillin clavulanate", "3x250-500mg", "Pneumonia: amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari.")).toBe("verified");
