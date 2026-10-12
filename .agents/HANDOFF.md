@@ -1,5 +1,15 @@
 # Sentrapedia handoff
 
+## Dify out of the main composer; dose inventory tracked - 2026-10-12 Asia/Jakarta
+
+- Gaffer: Dify is only a side chatbot, not part of the main system; the main system is MIRA diagnosis and therapy accuracy. Gaffer chose this branch for the work and to track the inventory without the legacy files.
+- `0a708b4e` (R2): `analyzeMain` in `src/components/workspace.tsx` calls MIRA only. The block is restored byte for byte from `0ebd2abf^` (checked with `diff`). Before, with `DIFY_API_KEY` set, every MIRA-mode question was answered by Dify and skipped grounding, postchecks and the evidence gate. The `/dify` page, `api/dify/*` and the sidebar entry are unchanged.
+- Dose inventory: five files copied from the main checkout's `.runtime/dose-inventory/` to `data/dose-inventory/` (SHA-256 identical), plus a README. `penyakit.json` and `drug_mapping.json` stay untracked. `build_inventory.py` cannot rerun on this branch: `oracle-ii/knowledge_base/json/` is not here.
+- Main checkout (`chore/tools-closeout`): its four uncommitted MIRA files are an older copy of this branch (`postchecks.py`, `test_components.py` identical; `test_packaging.py`, `SOURCE.json` older). Left untouched; Gaffer decides whether to discard them.
+- Verified: `tsc` 0, `eslint src/components/workspace.tsx` 0, `vitest tests/workspace.test.ts tests/mira-composer.test.ts` 47/47. Full suite, build and browser check not run.
+- Open: `iso_gap_fill.json` holds verbatim ISO Indonesia excerpts; decide before pushing to a public remote. Next dose-gate work is `docs/plans/active/Audit_actions.md` in the main checkout (untracked there), which needs paid eval calls.
+- Not pushed.
+
 ## Eval: ICD-10 label-to-name overlap (M5) - 2026-10-12 Asia/Jakarta
 
 - Gaffer asked for M5 and approved the bounded design with one Opus review.
