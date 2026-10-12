@@ -20,6 +20,10 @@ describe("clinical evidence gate", () => {
     expect(out?.regimen[0].dose).toBe("3x500mg");
     expect(report.drugs).toEqual([{ drug: "Amoxicillin", dose: "3x500mg", status: "verified", evidenceIds: ["E1"] }]);
   });
+  it("reads an English ch as the Indonesian k", () => {
+    const { report } = gateTherapy(therapy([drug("Chlorpheniramine", "3x4mg"), drug("Chloramphenicol", "4x500mg")]), bundle("Pneumonia: klorfeniramin maleat 3 x 4 mg; kloramfenikol 4 x 500 mg."), pneumonia);
+    expect(report.drugs.map(d => d.status)).toEqual(["verified", "verified"]);
+  });
   it("blanks a dose whose strength is not in a passage naming the drug", () => {
     const { therapy: out, report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Amoksisilin 250 mg untuk anak."), pneumonia);
     expect(out?.regimen[0]).toMatchObject({ drug: "Amoxicillin", dose: "" });

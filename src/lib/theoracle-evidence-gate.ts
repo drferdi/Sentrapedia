@@ -38,9 +38,10 @@ const UNITS_PER_DOSE = new RegExp(String.raw`\d+\s*[x×]\s*${TABLETS}|(?:^|[^\d.
 const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
 const doses = (pattern: RegExp, text: string) => [...text.matchAll(new RegExp(pattern.source, "gi"))].some(m => COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80)));
 
-// English and Indonesian spellings of generic names converge: amoxicillin and amoksisilin -> amoksisilin.
+// English and Indonesian spellings of generic names converge: amoxicillin and amoksisilin -> amoksisilin,
+// chlorpheniramine and klorfeniramin -> klorfeniramin.
 function spell(word: string): string {
-  return word.replace(/ph/g, "f").replace(/th/g, "t").replace(/x/g, "ks").replace(/c(?=[eiy])/g, "s").replace(/c/g, "k").replace(/y/g, "i").replace(/(.)\1+/g, "$1").replace(/(.{4,})e$/, "$1");
+  return word.replace(/ph/g, "f").replace(/th/g, "t").replace(/ch/g, "k").replace(/x/g, "ks").replace(/c(?=[eiy])/g, "s").replace(/c/g, "k").replace(/y/g, "i").replace(/(.)\1+/g, "$1").replace(/(.{4,})e$/, "$1");
 }
 const tokens = (text: string) => text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z]+/).filter(Boolean).map(spell);
 const names = (drug: string) => tokens(drug).filter(word => word.length >= 4);
