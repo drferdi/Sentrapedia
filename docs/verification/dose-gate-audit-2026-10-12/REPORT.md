@@ -100,7 +100,14 @@ Fail-safe limits kept on purpose (dose blanked, never wrong): a strength before 
 - a model-written combined name ("Parasetamol/Ibuprofen" 3x400mg verifies from "parasetamol 500 mg; ibuprofen 400 mg", because "ibuprofen" counts as the drug's own name);
 - a "+" partner with two strengths ("Diosmin 450 mg + Hesperidin 50 mg atau 100 mg" verifies diosmin 100 mg).
 
-It also found fixable leaks: "(", "atau", "dan" not being cut points ("kotrimoksazol 2 x 480 mg (trimetoprim 80 mg)", "parasetamol 500 mg atau ibuprofen 400 mg"); natrium and kalium in the allowed list; and "tiap 8 jam", "dalam 24 jam" and "/hr" not being read. Indication words ("untuk pasien rawat inap", "nyeri ringan-sedang") blank correct doses, which is an open-ended tail. Gaffer was asked for the next design step; no change followed review 4.
+It also found fixable leaks: "(", "atau", "dan" not being cut points ("kotrimoksazol 2 x 480 mg (trimetoprim 80 mg)", "parasetamol 500 mg atau ibuprofen 400 mg"); natrium and kalium in the allowed list; and "tiap 8 jam", "dalam 24 jam" and "/hr" not being read. Indication words ("untuk pasien rawat inap", "nyeri ringan-sedang") blank correct doses, which is an open-ended tail. Gaffer chose a drug-name lexicon.
+
+**Lexicon (`2327700f`) and review 5: FIX, circuit breaker reached again.** `src/lib/theoracle-drug-words.json` (837 words from PNPK, PPK and FORNAS names; `scripts/build-drug-words.mjs`) ends a window at another drug's name followed by a strength. Slash-group numbers are never read alone, partners after "+", "atau", "dan" and "serta" are masked, and "(", "atau", "dan" and "serta" became cut points. The test suite went to 89, and the replay stayed at legacy 49 / targeted 48. Review 5 closed every earlier input but found three new categories:
+- the window is fail-open wherever the lexicon misses a name (metformin, glibenklamid, simvastatin, lamivudin, zidovudin, INH, ambroksol and others), before the first strength and at connectors such as "dengan";
+- drugs named only by salt words ("kalsium glukonat 1 g" verifies magnesium sulfat 1 g);
+- slash alternatives with different doses read as aliases ("isosorbid dinitrat/nitrogliserin 0,4 mg").
+
+Fixable items: an "atau" partner's own count ("salbutamol 2 puff atau ipratropium 4 puff"), and "q8h", "tid" and "bid" not read as several doses. The design question went back to Gaffer.
 
 **Live eval.** A third live run after the fixes (`live-after-targeted.*`) reached 8/61 cases (8 verified, 2 dose removed among them; $0.07). The new engine logging shows the cause of all three failed runs: the model provider returned `APIStatusError 402` (OpenRouter credit exhausted). The rate-limit reading in section 1 was wrong; the breaker fix (change 6) stands, because failed parallel copies of a part that succeeded used to count toward the 3 consecutive failures that pause model calls for 60 s. The live before/after, and the effect of change 5 (prompt), wait for Gaffer to top up the OpenRouter credit.
 

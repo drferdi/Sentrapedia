@@ -24,7 +24,7 @@
   - Two drugs with no cut point between them share a window.
   - The FORNAS sentence-end case blanks citations.
   - Section 3 design items 1-4 are unchanged.
-- Review 4 of `16e83955` returned FIX with three new leak categories: slash-positional combination strengths, a model-written combined name, and a "+" partner with two strengths (REPORT section 6). That hit the circuit breaker, so no further heuristic round was made, and the next design step went to Gaffer. Options: a drug-name lexicon, one more patch round, or stopping at the current gate.
+- Review 4 of `16e83955` returned FIX with three new leak categories: slash-positional combination strengths, a model-written combined name, and a "+" partner with two strengths (REPORT section 6). Gaffer chose a drug-name lexicon: `2327700f` (837 words, `scripts/build-drug-words.mjs`), tests 89, replay 49/48. Review 5 returned FIX with three new categories: lexicon misses fail open (metformin, simvastatin, lamivudin, INH...), salt-only drug names, and slash alternatives with different doses. The design question went back to Gaffer again (REPORT section 6).
 - Harness: `.runtime/audit/` (git-ignored), rows-review.json (49/49 baseline), rows-rereview.json, rows-round3.json.
 - Not pushed.
 
