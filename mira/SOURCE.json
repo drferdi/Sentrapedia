@@ -68,7 +68,7 @@
       "source": "assist/service/engine.py",
       "path": "service/engine.py",
       "sourceSha256": "dd1b854c8c068b13f8f398cde27b94ed9239ab910f592f3fc8f9390795dbe829",
-      "packagedSha256": "796beb1bf2b1eec5ca20bc9a7e36acb6a2279ae42c67403324e2192c909f51d2"
+      "packagedSha256": "e9b174d2ebcf1eaba81477764abc9a427216f68f7e3d9e12cd982a7f4c6c31d9"
     },
     {
       "source": "assist/service/HANDOFF_NOTES.md",
@@ -200,7 +200,7 @@
       "source": "assist/service/tests/test_step_api.py",
       "path": "service/tests/test_step_api.py",
       "sourceSha256": "f099ac554aa196548f4dce77f9d695d88a081e16038eb7d96132e7a430064f2f",
-      "packagedSha256": "58c58315364a4d85c0481df317ae1bc00142ce82b00448733c958e16bd5052a3"
+      "packagedSha256": "c5e174fc1adf2b13d742788679616992112373410535e494332b1d071ea1dc13"
     },
     {
       "source": "assist/service/tests/__init__.py",
