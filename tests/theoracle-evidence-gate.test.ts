@@ -48,6 +48,20 @@ describe("clinical evidence gate", () => {
     const mpff = bundle("Pneumonia: Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet selama 4 hari.");
     expect(gateTherapy(therapy([drug("Diosmin", "3x450mg")]), mpff, pneumonia).report.drugs[0].status).toBe("doseRemoved");
   });
+  it("verifies a single strength inside a source range of the same unit", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Betahistin mesilat", "3x6mg", "Pneumonia: Betahistin mesilat 3 x 6-12 mg oral.")).toBe("verified");
+    expect(one("Sertraline", "1x25mg", "Pneumonia: Sertralin 1 x 25-50 mg/hari oral.")).toBe("verified");
+    expect(one("Furosemid", "1x30mg", "Pneumonia: furosemid injeksi 20 s/d 40 mg bolus.")).toBe("verified");
+  });
+  it("does not stretch a source range to another value, unit, per-kg form or a model range", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Betahistin", "3x16mg", "Pneumonia: Betahistin 3 x 6-12 mg.")).toBe("doseRemoved");
+    expect(one("Betahistin", "3x6mg", "Pneumonia: Betahistin 3 x 6-12 mcg.")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x40mg", "Pneumonia: amoksisilin 25-50 mg/kgBB/hari.")).toBe("doseRemoved");
+    expect(one("Betahistin", "3x6mg", "Pneumonia: Betahistin 6 tablet, lalu 12 mg.")).toBe("doseRemoved");
+    expect(one("Betahistin", "3x6-8mg", "Pneumonia: Betahistin 3 x 6-12 mg.")).toBe("doseRemoved");
+  });
   it("blanks a dose whose strength is not in a passage naming the drug", () => {
     const { therapy: out, report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Amoksisilin 250 mg untuk anak."), pneumonia);
     expect(out?.regimen[0]).toMatchObject({ drug: "Amoxicillin", dose: "" });

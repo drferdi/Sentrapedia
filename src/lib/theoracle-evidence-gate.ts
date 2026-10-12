@@ -38,7 +38,19 @@ const UNITS_PER_DOSE = new RegExp(String.raw`\d+\s*[x×]\s*${TABLETS}|(?:^|[^\d.
 const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
 // Only a strength inside [from, to) counts; the tablet check still reads on past `to` ("Diosmin 450 mg + Hesperidin 50 mg 3 x 2 tablet").
 const doses = (pattern: RegExp, text: string, from = 0, to = text.length) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
-  .some(m => m.index >= from && m.index + m[0].length <= to && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
+  .some(m => m.index >= from && m.index + m[0].length <= to && inRange(pattern, m) && (COUNTED.test(m[0]) || !UNITS_PER_DOSE.test(text.slice(m.index + m[0].length, m.index + m[0].length + 80))));
+// A single dose strength may also match a source range of the same unit and per-kg form ("6 mg" in "3 x 6-12 mg"); `inside`
+// holds its value for that pattern, and the range must contain it. Only the dose gets such a pattern, never a safety threshold.
+const inside = new WeakMap<RegExp, number>();
+const amount = (value: string) => {
+  const digits = value.replace(/\s*(?:juta|ribu|million)$/, "");
+  const scale = /(?:juta|million)$/.test(value) ? 1e6 : /ribu$/.test(value) ? 1e3 : 1;
+  return scale * Number(/^\d{1,3}(?:[.,]\d{3})+$/.test(digits) ? digits.replace(/[.,]/g, "") : digits.replace(",", "."));
+};
+const inRange = (pattern: RegExp, m: RegExpMatchArray) => {
+  const value = inside.get(pattern);
+  return m[1] === undefined || (value !== undefined && amount(m[1]) <= value && value <= amount(m[2]));
+};
 
 // English and Indonesian spellings of generic names converge: amoxicillin and amoksisilin -> amoksisilin,
 // chlorpheniramine and klorfeniramin -> klorfeniramin.
@@ -73,12 +85,19 @@ const number = (value: string) => value.replace(/[.,]/g, "[.,]").replace(/\s+/g,
 // Each strength is per kg or not on its own ("10 mg/kgBB, maks 500 mg"), and "per kg" reads like "/kg".
 // Per kg may follow another per-unit tail ("10 mg/hari/kgBB") or the other end of a range ("10 mg - 15 mg/kgBB").
 const PER_KG = String.raw`(?:${RANGE}${NUMBER}\s*[a-zµμ]+)?(?:\s*\/\s*(?:\d[\d.,]*\s*)?(?:hari|dosis|kali|jam|menit|mnt|detik)\b)*\s*(?:\/|per)\s*(?:kg|kilogram)`;
-const strengths = (dose: string, percent = true) => {
+// With `within`, a single strength also matches a source range around it (see `inside`); a model range keeps both ends exact.
+const strengths = (dose: string, percent = true, within = false) => {
   const text = dose.toLowerCase();
   const found = [...text.matchAll(STRENGTH)].filter(m => percent || m[3] !== "%");
   return found.filter(m => !(COUNTED.test(m[3]) && !m[1] && m[2] === "1" && found.some(o => !COUNTED.test(o[3])))).flatMap(m => {
     const tail = new RegExp(`^${PER_KG}`).test(text.slice(m.index + m[0].length)) ? `(?=${PER_KG})` : `(?!${PER_KG})`;
-    return [...(m[1] ? [`${number(m[1])}(?:(?:${RANGE}|\\s*\\/\\s*)${number(m[2])})?`] : []), number(m[2])].map(value => new RegExp(`(?<![\\d.,])${value}\\s*${UNIT[m[3]]}${m[3] === "%" ? "" : "\\b"}${tail}`, "i"));
+    const unit = `\\s*${UNIT[m[3]]}${m[3] === "%" ? "" : "\\b"}${tail}`;
+    if (within && !m[1]) {
+      const ranged = new RegExp(`(?<![\\d.,])(?:${number(m[2])}|(${NUMBER})${RANGE}(${NUMBER}))${unit}`, "i");
+      inside.set(ranged, amount(m[2]));
+      return [ranged];
+    }
+    return [...(m[1] ? [`${number(m[1])}(?:(?:${RANGE}|\\s*\\/\\s*)${number(m[2])})?`] : []), number(m[2])].map(value => new RegExp(`(?<![\\d.,])${value}${unit}`, "i"));
   });
 };
 // Clauses end at ";", a newline, a "," that is not a decimal mark ("0,9%" stays whole) or a "." that ends a sentence ("maks. 4 g" stays whole).
@@ -122,7 +141,7 @@ export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBund
   const drugs = therapy.regimen.map((r): GateDrug => {
     const named = naming(r.drug);
     if (!named.length) return { drug: r.drug, dose: r.dose, status: "removed", evidenceIds: [] };
-    const patterns = strengths(r.dose + " " + r.drug);
+    const patterns = strengths(r.dose + " " + r.drug, true, true);
     const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to }) => patterns.every(pattern => doses(pattern, p.text, from, to)))) : [];
     return dosing.length ? { drug: r.drug, dose: r.dose, status: "verified", evidenceIds: dosing.map(p => p.id) } : { drug: r.drug, dose: r.dose, status: "doseRemoved", evidenceIds: named.map(p => p.id) };
   });
