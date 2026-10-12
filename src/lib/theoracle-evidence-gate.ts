@@ -89,22 +89,25 @@ const OWN_END = /(?:^|(?<!\d)\s)[A-Za-z][.)]\s|[•]|\n\s*-/;
 // not the drug's until its own name comes back. An unknown word fails safe: "parasetamol 500 mg; ibuprofen 400 mg", "rifampisin,
 // INH 300 mg", "500 mg dengan glibenklamid 5 mg", "isosorbid dinitrat/nitrogliserin 0,4 mg" and "kalsium glukonat 1 g" do not dose
 // the first drug, while "dewasa 500 mg; anak 250 mg" and "dapat dinaikkan sampai 40 mg" do. Three exceptions:
-// - a bracket right after the name holding only known words, the drug's own name or short capitals is an alias: "Efavirenz (EFV)
-//   600 mg", "klorfeniramin maleat (CTM) 3 x 4 mg"; any other bracket is read word by word ("(atau ibuprofen) 400 mg");
+// - a bracket after the name (and its salt words) holding one short capital or only the drug's own and salt words is an alias:
+//   "Efavirenz (EFV) 600 mg", "klorfeniramin maleat (CTM) 3 x 4 mg"; any other bracket is read word by word ("(atau ibuprofen)
+//   400 mg", "(dengan HCT)", "dosis anak (TDF)");
 // - in a FORNAS passage, form "1." before the entry's first strength, or the next form number, returns the strength to the
 //   entry's drug ("... (TR-PB) 1. granula 3 g", "... Asma ... 2. cairan ih 0,25 mg/mL"), unless a new numbered entry began
 //   ("2 btl/bulan. 10 timolol ... 1. tts mata 0,25%"); another "1." ("Ibuprofen 1. tab 400 mg") does not;
 // - after a ")" closing a group opened before the name, a count per administration is the group's: "(Diosmin 450 mg + Hesperidin
 //   50 mg) 3 x 2 tablet", "(Karbogliserin / Gliserin 10% atau ... Dokusat 0.5%) 3 x 2-3 tetes".
 // A model-written combination's other name is a partner after a strength with no new mention of the drug in between, or after a
-// ",", ";", "(" or "atau": neither "Parasetamol/Ibuprofen" 400 mg from "parasetamol 500 mg; ibuprofen 400 mg" or "parasetamol,
+// ",", ";", "(", "atau", "dan" or "serta": neither "Parasetamol/Ibuprofen" 400 mg from "parasetamol 500 mg; ibuprofen 400 mg" or "parasetamol,
 // ibuprofen 400 mg", nor "Amoxicillin clavulanate" 125 mg from "amoksisilin 500 mg + asam klavulanat 125 mg". Only name words of
-// four or more letters are the drug's own ("Rifampisin + INH" does not own "INH 300 mg"). A vitamin's letter code is its name:
-// "vitamin K 1 mg, vitamin C 500 mg" doses vitamin K 1 mg only. A column table ("Parasetamol Ibuprofen 500 mg 400 mg", the
-// name right after another name and two strengths in a row) is not read.
-const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "pasien", "dosis", "maks", "maksimal", "maksimum", "awal", "mula", "mulai", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "mnt", "detik", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "serta", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "rawat", "inap", "jalan", "nyeri", "ringan", "sedang", "tunggal", "bolus", "drip", "pelan", "perlahan", "bb", "kgbb", "kg", "mg", "mcg", "ml", "dl", "iu", "unit", "gram", "juta", "ribu", "mmol", "x", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "gtt", "puff", "semprot", "semprotan", "spray", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "amp", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "prn", "od", "bid", "tid", "qid", "qd", "hs",
-  // salt and ester words, never a drug alone ("klorfeniramin maleat 3 x 4 mg"); natrium, kalium and kalsium are drugs alone
-  "maleat", "mesilat", "mesylate", "besilat", "tartrat", "suksinat", "hidroklorida", "hcl", "hidrobromida", "sulfat", "fosfat", "sitrat", "asetat", "laktat", "glukonat", "klorida", "trihidrat", "monohidrat", "dihidrat", "propionat", "dipropionat", "valerat", "asetonid", "furoat", "dekanoat", "palmitat", "trometamol",
+// four or more letters are the drug's own ("Rifampisin + INH" does not own "INH 300 mg"). Once a vitamin is named, a letter code
+// is a name: "vitamin K 1 mg, vitamin C 500 mg" doses vitamin K 1 mg only, "vitamin B1 100 mg, B6 10 mg" B1 100 mg only. A
+// column table (the name right after another name, across "|" too, then two strengths in a row, the second not a tablet or
+// capsule count) is not read: "Parasetamol Ibuprofen 500 mg 400 mg", "| Parasetamol | Ibuprofen |\n| Dewasa | 500 mg | 400 mg |".
+// Salt and ester words, never a drug alone ("klorfeniramin maleat 3 x 4 mg"); natrium, kalium and kalsium are drugs alone.
+const SALTS = ["maleat", "mesilat", "mesylate", "besilat", "tartrat", "suksinat", "hidroklorida", "hcl", "hidrobromida", "sulfat", "fosfat", "sitrat", "asetat", "laktat", "glukonat", "klorida", "trihidrat", "monohidrat", "dihidrat", "propionat", "dipropionat", "valerat", "asetonid", "furoat", "dekanoat", "palmitat", "trometamol"];
+const SALT = new Set(SALTS.map(spell));
+const ALLOWED = new Set([...SALTS, "anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "pasien", "dosis", "maks", "maksimal", "maksimum", "awal", "mula", "mulai", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "mnt", "detik", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "serta", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "rawat", "inap", "jalan", "nyeri", "ringan", "sedang", "tunggal", "bolus", "drip", "pelan", "perlahan", "bb", "kgbb", "kg", "mg", "mcg", "ml", "dl", "iu", "unit", "gram", "juta", "ribu", "mmol", "x", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "gtt", "puff", "semprot", "semprotan", "spray", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "amp", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "prn", "od", "bid", "tid", "qid", "qd", "hs",
   // more forms and insulin regimen words
   "pasta", "losion", "lotion", "bedak", "sampo", "ovula", "solusio", "inhaler", "nebulisasi", "patch", "transdermal", "basal", "prandial", "forte",
   // symptoms and course, never a drug name ("Parasetamol, demam ringan, 500 mg")
@@ -113,14 +116,15 @@ const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja
   "tts", "mata", "telinga", "hidung", "sal", "salut", "selaput", "enterik", "serb", "cairan", "sir", "susp", "supp", "lar", "aerosol", "nebul", "film", "lepas", "lambat", "kunyah", "dispersibel", "btl", "tbg"].map(spell));
 const ALIAS = /^((?:\s+\p{L}+){0,2})\s*\(([^()\d]{0,60})\)/u;
 const VITAMIN = /^[A-K]\d{0,2}$/;
-const COLUMNS = new RegExp(String.raw`^\s*(?:${STRENGTH.source})\s*(?:${STRENGTH.source})`, "i");
+const COLUMNS = new RegExp(String.raw`^[\s|]*(?:[A-Za-z]+[\s|:]*)?(?:${STRENGTH.source})[\s|]*(?:${STRENGTH.source})`, "i");
 const FORNAS_FORM = /(?<![\d.,])\d{1,2}\.\s/g;
 const ENTRY = /(?:^|\s)\d{1,3}\s+$/;
 const SHARED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?|tetes|gtt|puff|semprotan|semprot|spray)$/i;
 const ownedSpans = (win: string, own: string[], partners: string[], code: string | undefined, fornas: boolean) => {
   const bracket = win.match(ALIAS);
-  const known = (word: string) => tokens(word).every(t => t.length < 2 || own.includes(t) || ALLOWED.has(t));
-  const alias = bracket && bracket[1].split(/\s+/).filter(Boolean).every(known) && bracket[2].split(/[^\p{L}]+/u).filter(Boolean).every(word => /^[A-Z]{2,5}$/.test(word) || known(word)) ? bracket[0].length : 0;
+  const named = (word: string) => tokens(word).every(t => own.includes(t) || SALT.has(t));
+  const inside = bracket?.[2].trim() ?? "";
+  const alias = bracket && bracket[1].split(/\s+/).filter(Boolean).every(named) && (/^[A-Z]{2,5}$/.test(inside) || inside.split(/[^\p{L}]+/u).filter(Boolean).every(named)) ? bracket[0].length : 0;
   const strengths = [...win.matchAll(STRENGTH)];
   const events = [
     ...strengths.map(m => ({ at: m.index, kind: "strength", m })),
@@ -129,7 +133,7 @@ const ownedSpans = (win: string, own: string[], partners: string[], code: string
     ...[...win.matchAll(/[(),;]/g)].filter(m => m.index >= alias && !(m[0] === "," && /\d/.test(win[m.index + 1] ?? ""))).map(m => ({ at: m.index, kind: "mark", m })),
   ].sort((a, b) => a.at - b.at);
   const spans: [number, number][] = [];
-  let owner = "self", entry = false, depth = 0, dosed = false, mentioned = false, separated = false, form = 0;
+  let owner = "self", entry = false, depth = 0, dosed = false, mentioned = false, separated = false, form = 0, vitamin = own[0] === "vitamin";
   for (const { at, kind, m } of events) {
     if (kind === "strength") {
       if (owner === "self" || (owner === "group" && SHARED.test(m[3]))) spans.push([at, at + m[0].length]);
@@ -141,13 +145,14 @@ const ownedSpans = (win: string, own: string[], partners: string[], code: string
     } else if (kind === "mark") {
       if (m[0] !== ")") separated = true;
       if (m[0] === "(") depth++; else if (m[0] === ")") { if (depth) depth--; else owner = "group"; }
-    } else if (VITAMIN.test(m[0])) {
-      if (/vit(?:amin)?\.?\s*$/i.test(win.slice(0, at)) || !win.slice(0, at).trim()) owner = m[0].toLowerCase() === code ? "self" : "other";
+    } else if (vitamin && (VITAMIN.test(m[0]) || (VITAMIN.test(m[0].toUpperCase()) && (/vit(?:amin)?\.?\s*$/i.test(win.slice(0, at)) || !win.slice(0, at).trim())))) {
+      owner = m[0].toLowerCase() === code ? "self" : "other";
     } else {
       const words = tokens(m[0]).filter(word => word.length >= 2);
+      vitamin ||= words.includes("vitamin");
       if (words.includes(own[0])) { owner = "self"; mentioned = true; separated = false; }
       else if (words.some(word => partners.includes(word))) owner = (dosed && !mentioned) || separated ? "other" : "self";
-      else if (words.includes("atau")) separated = true;
+      else if (words.some(word => ["atau", "dan", "serta"].includes(word))) separated = true;
       else if (words.some(word => !own.includes(word) && !ALLOWED.has(word))) { owner = "other"; entry ||= ENTRY.test(win.slice(0, at)); }
     }
   }
@@ -166,8 +171,9 @@ const owned = (text: string, drug: string, fornas: boolean) => {
     const window = text.slice(from, from + 200);
     const to = from + (window.search(OWN_END) < 0 ? window.length : window.search(OWN_END));
     const clause = tokens(text.slice(Math.max(0, m.index - 60), m.index).split(/[;,\n]|\.\s/).at(-1) + " " + text.slice(from, to));
-    const previous = text.slice(Math.max(0, m.index - 40), m.index).match(/(\p{L}+)\s+$/u)?.[1] ?? "";
-    if (tokens(previous).some(word => word.length >= 2 && !own.includes(word) && !ALLOWED.has(word)) && COLUMNS.test(window)) return [];
+    const previous = text.slice(Math.max(0, m.index - 40), m.index).match(/(\p{L}+)[\s|]+$/u)?.[1] ?? "";
+    const columns = COLUMNS.exec(window);
+    if (tokens(previous).some(word => word.length >= 2 && !own.includes(word) && !ALLOWED.has(word)) && columns && !COUNTED.test(columns[6])) return [];
     const spans = ownedSpans(text.slice(from, to), own, partners, code, fornas).map(([a, b]): [number, number] => [from + a, from + b]);
     return rest.every(word => clause.includes(word)) ? [{ from, spans }] : [];
   });

@@ -162,6 +162,19 @@ describe("clinical evidence gate", () => {
     expect(one("Parasetamol", "3x500mg", "Pneumonia: Parasetamol, demam ringan, 500 mg")).toBe("verified");
     expect(one("Kotrimoksazol", "2x960mg", "Pneumonia: kotrimoksazol forte 960 mg")).toBe("verified");
     expect(one("Zinc", "1x10mg", "Pneumonia: Suplementasi Zinc (khusus anak): 10 mg/hari (< 6 bulan)")).toBe("verified");
+    expect(one("Rifampisin", "1x300mg", "Pneumonia: rifampisin (atau INH) 300 mg")).toBe("doseRemoved");
+    expect(one("Kaptopril", "1x25mg", "Pneumonia: kaptopril (+HCT) 25 mg")).toBe("doseRemoved");
+    expect(one("Lisinopril", "1x12,5mg", "Pneumonia: lisinopril (dengan HCT) 12,5 mg")).toBe("doseRemoved");
+    expect(one("Efavirenz", "1x300mg", "Pneumonia: efavirenz dosis anak (TDF) 300 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol/Ibuprofen", "3x400mg", "Pneumonia: parasetamol dan ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Vitamin K", "1x500mg", "Pneumonia: vitamin k 1 mg, vitamin c 500 mg")).toBe("doseRemoved");
+    expect(one("Vitamin B1", "1x10mg", "Pneumonia: vitamin B1 100 mg, B6 10 mg, B12 1000 mcg")).toBe("doseRemoved");
+    expect(one("Vitamin B1", "1x100mg", "Pneumonia: vitamin B1 100 mg, B6 10 mg, B12 1000 mcg")).toBe("verified");
+    expect(one("Ibuprofen", "3x500mg", "Pneumonia:\n| | Parasetamol | Ibuprofen |\n| Dewasa | 500 mg | 400 mg |")).toBe("doseRemoved");
+    expect(one("Ibuprofen", "3x500mg", "Pneumonia:\nParasetamol | Ibuprofen\n500 mg | 400 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x500mg", "Pneumonia: Berikan parasetamol 500 mg 1 tablet 3 x sehari")).toBe("verified");
+    expect(one("Amoxicillin", "3x500mg", "Pneumonia: Kombinasi amoksisilin 500 mg 1 kapsul")).toBe("verified");
+    expect(one("Penisilin G", "1x1,2 juta IU", "Pneumonia: penisilin G 1,2 juta IU")).toBe("verified");
   });
   it("does not take a daily total as the amount of each of several doses", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
@@ -184,7 +197,7 @@ describe("clinical evidence gate", () => {
     expect(one("Kolkisin", "3x0,5mg", "Pneumonia: kolkisin 3 kali sehari 0,5 mg.")).toBe("verified");
     expect(one("Parasetamol", "3x500mg", "Pneumonia: parasetamol 500 mg sehari 3 kali.")).toBe("verified");
     expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 500 mg/8 jam.")).toBe("verified");
-    expect(one("Amoxicillin clavulanate", "3x250-500mg", "Pneumonia: amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari.")).toBe("verified");
+    expect(one("Amoxicillin clavulanate", "3x250-500mg", "Pneumonia: amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari.")).toBe("doseRemoved"); // "X dan Y <dose>" may be Y's dose (fails safe)
     expect(one("Karbogliserin", "3x2-3 tetes", "Pneumonia: karbogliserin 10% 3 x 2-3 tetes sehari.")).toBe("verified");
   });
   it("does not cut a drug's window at a single-letter unit", () => {
