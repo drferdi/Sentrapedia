@@ -600,6 +600,14 @@ def test_therapy_rules_ask_for_pre_referral_drugs():
     assert "A surgical or referral diagnosis still gets its pre-referral drugs" in rules
 
 
+def test_therapy_rules_never_take_a_frequency_alone_as_a_dose():
+    from service.prompts import FAST_THERAPY_RULES
+
+    rules = " ".join(FAST_THERAPY_RULES.split())
+    assert "never a frequency alone such as 1x or 2-3x" in rules
+    assert "a single dose is 1x." not in rules
+
+
 def test_grounding_reaches_fast_diagnosis_workup_and_therapy_prompts(make_client, example_request):
     outputs = [
         *fast_outputs([completion(diagnosis_part(), "gpt-4o")], [completion(workup_part(), "gpt-4o")]),

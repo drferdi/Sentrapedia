@@ -98,7 +98,7 @@
       "source": "assist/service/prompts.py",
       "path": "service/prompts.py",
       "sourceSha256": "15c1e5e6960279971439ce9c3e391e0c7e3609df8a20c02176d81ace872d7c9e",
-      "packagedSha256": "5d8efcb2df7f3a700739fe64ed6285de3972d78a713df69251a3c6bb16ee74a8"
+      "packagedSha256": "e92e79c4fad73b2cff08b977b37d27c2612bef0a77efe7f8aa6e93ecbf0fb6cc"
     },
     {
       "source": "assist/service/README.md",
@@ -200,7 +200,7 @@
       "source": "assist/service/tests/test_step_api.py",
       "path": "service/tests/test_step_api.py",
       "sourceSha256": "f099ac554aa196548f4dce77f9d695d88a081e16038eb7d96132e7a430064f2f",
-      "packagedSha256": "c5e174fc1adf2b13d742788679616992112373410535e494332b1d071ea1dc13"
+      "packagedSha256": "3f11220c477976648fdbfb3c8cccd99b03063f18a3d8640477377b0010047ed7"
     },
     {
       "source": "assist/service/tests/__init__.py",
