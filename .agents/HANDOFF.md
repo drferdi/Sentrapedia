@@ -13,8 +13,8 @@
   - `4d902a4d` the fast therapy prompt asks for an amount in every dose
   - `d6e0768a`, `ee5bc240`, `16e83955` fix the findings of three Opus reviews of the dose window
 - The window rule is now: after a cut point, every word up to the next strength must be on a known-word list or be the drug's own name, otherwise the window ends (fails safe). A "+" partner is masked. A daily total does not verify each of several doses.
-- Offline replay of the same 122 replies: legacy 42 -> 49, targeted 42 -> 48, with no wrong-disease or wrong-drug verification left among them. The targeted drop from 49 to 48 is a correct block: the amoxicillin-clavulanate impetigo row had been verified by kloksasilin's range.
-- Tests: gate 88/88, MIRA 180 passed + 1 skipped. `tsc` 0, `eslint` 0 on the touched files.
+- Offline replay of the same 122 replies: legacy 42 -> 48, targeted 42 -> 48 at `ae480804`, with no wrong-disease or wrong-drug verification left among them. Against the 49/49 peak: the impetigo amoxicillin-clavulanate row was another drug's range (a correct block), and legacy isoniazid 300 mg came from an MDR weight-band table (a fail-safe blank).
+- Tests: gate 91/91, the 7 gate test files 181/181, MIRA 180 passed + 1 skipped. `tsc` 0, `eslint` 0 on the touched files.
 - Live eval: the third run reached 8/61. The new engine log shows the cause of all three failed runs: OpenRouter HTTP 402 (credit exhausted). The earlier rate-limit reading was wrong. The live before/after and the effect of the prompt change wait for Gaffer to top up the credit.
 - Phase 4, REPORT section 7: no wrong dose in the 10 Gaffer-approved tatalaksana documents against PNPK, IDSA/SIS, ADA and AAO-HNS.
   - Six coverage gaps, among them the asphyxia ETT dose and 1:10.000 concentration, and the Hirschsprung irrigation of 10-20 mL/kgBB.
@@ -24,7 +24,7 @@
   - Two drugs with no cut point between them share a window.
   - The FORNAS sentence-end case blanks citations.
   - Section 3 design items 1-4 are unchanged.
-- Review 4 of `16e83955` returned FIX with three new leak categories: slash-positional combination strengths, a model-written combined name, and a "+" partner with two strengths (REPORT section 6). Gaffer chose a drug-name lexicon: `2327700f` (837 words, `scripts/build-drug-words.mjs`), tests 89, replay 49/48. Review 5 returned FIX with three new categories: lexicon misses fail open (metformin, simvastatin, lamivudin, INH...), salt-only drug names, and slash alternatives with different doses. The design question went back to Gaffer again (REPORT section 6).
+- Review 4 of `16e83955` returned FIX with three new leak categories: slash-positional combination strengths, a model-written combined name, and a "+" partner with two strengths (REPORT section 6). Gaffer chose a drug-name lexicon: `2327700f` (837 words, `scripts/build-drug-words.mjs`), tests 89, replay 49/48. Review 5 returned FIX with three new categories: lexicon misses fail open (metformin, simvastatin, lamivudin, INH...), salt-only drug names, and slash alternatives with different doses. Gaffer then chose a per-strength fail-safe rule: `ea2fe8f8` (a strength counts only when the last name-like word before it is the drug's own; any unknown word fails safe; lexicon removed) and `ae480804` (review-6 fixes: alias bracket, partner after a separator, 4+ letter own names, vitamin codes, FORNAS form reset only in FORNAS passages, column tables). Review 7 (class A only) was fixed in the following commit, which has not been reviewed itself. Tests 91, gate test files 181/181, replay legacy 48 / targeted 48 (two fail-safe blanks, REPORT section 6).
 - Harness: `.runtime/audit/` (git-ignored), rows-review.json (49/49 baseline), rows-rereview.json, rows-round3.json.
 - Not pushed.
 

@@ -1,7 +1,7 @@
 # Dose gate audit, phase 2-3 (2026-10-12)
 
 Plan: `docs/plans/active/Audit_actions.md` (main checkout, untracked). Branch `feat/sentrapedia-dify-theoracle`, gate at `0a708b4e`.
-Status: **CORRECTIONS APPLIED; DOSE WINDOW AT A DESIGN DECISION; LIVE MEASUREMENT BLOCKED.** Sections 1-4 are the classification as found (gate at `0a708b4e`). Gaffer approved all seven corrections; section 6 lists what was applied and the offline replay after each. The live eval is blocked by OpenRouter credit (HTTP 402), not by the gate.
+Status: **CORRECTIONS APPLIED; DOSE OWNERSHIP RULE IN PLACE (fail-safe); LIVE MEASUREMENT BLOCKED.** Sections 1-4 are the classification as found (gate at `0a708b4e`). Gaffer approved all seven corrections; section 6 lists what was applied and the offline replay after each. The live eval is blocked by OpenRouter credit (HTTP 402), not by the gate.
 
 ## 1. Data and method
 
@@ -90,8 +90,10 @@ Replay, verified drugs (legacy / targeted), same 122 replies:
 | after 1-4, 7 and the first review fixes (`d6e0768a`) | 49 | 49 |
 | after review 2 (`ee5bc240`) | 49 | 48 |
 | after review 3 (`16e83955`) | 49 | 48 |
+| drug-name lexicon (`2327700f`) | 49 | 48 |
+| per-strength ownership rule (`ea2fe8f8`, `ae480804`, review-7 fixes) | 48 | 48 |
 
-The one drop at `ee5bc240` is a correct block: amoxicillin-clavulanate 3x250-500mg for impetigo had been verified by the impetigo note's "Kloksasilin/Dikloksasilin 4 x 250-500 mg" (another drug's range). PERDOSKI states "Amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari", but those chunks do not name impetigo, so they are not "about" the diagnosis. Lamivudin 1 x 300 mg (section 3, item 0) is now dose-removed. Gate tests: 88 (`tests/theoracle-evidence-gate.test.ts`); MIRA tests 180 passed, 1 skipped.
+The one drop at `ee5bc240` is a correct block: amoxicillin-clavulanate 3x250-500mg for impetigo had been verified by the impetigo note's "Kloksasilin/Dikloksasilin 4 x 250-500 mg" (another drug's range). PERDOSKI states "Amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari", but those chunks do not name impetigo, so they are not "about" the diagnosis. Lamivudin 1 x 300 mg (section 3, item 0) is now dose-removed. Gate tests: 91 (`tests/theoracle-evidence-gate.test.ts`); the 7 test files that use the gate: 181/181; MIRA tests 180 passed, 1 skipped.
 
 Fail-safe limits kept on purpose (dose blanked, never wrong): a strength before the drug name; "600.000 - 1,2 juta IU" (multiplier on one end); "omeprazol untuk H. pylori 20 mg" (the capital "H." reads as an item letter); FORNAS rows whose restriction text has a sentence end before the next numbered form (budesonid 0,25 mg/mL keeps its PAPDI citation only); a "+" partner mask that also covers the first drug's own strength ("DHA + Piperakuin (DHP) tiap tablet mengandung 40 mg ...", still verified from another passage). Residual open (the known limit of a word-list window): two drugs with no cut point between them, such as "X 500 mg dan Y 400 mg" or "Karbogliserin / Gliserin 10% ... 3 x 2-3 tetes" (this one shares a dose on purpose), and "1,250-2,500 mg" read as thousands (the exact path shares that ambiguity). Section 3 items 1-4 (concentration as dose, strength list as regimen, frequency and duration unchecked, population unchecked) are unchanged.
 
@@ -108,6 +110,34 @@ It also found fixable leaks: "(", "atau", "dan" not being cut points ("kotrimoks
 - slash alternatives with different doses read as aliases ("isosorbid dinitrat/nitrogliserin 0,4 mg").
 
 Fixable items: an "atau" partner's own count ("salbutamol 2 puff atau ipratropium 4 puff"), and "q8h", "tid" and "bid" not read as several doses. The design question went back to Gaffer.
+
+**Per-strength ownership rule (`ea2fe8f8`, reviews 6 and 7, fixes in `ae480804` and the commit after it).** Gaffer chose a fail-safe rule, which replaces the cut points, masks and lexicon. Inside a drug's window, a strength counts only when the last name-like word before it is the drug's own. Any other word marks the strengths that follow as another drug's until the drug is named again. A word counts as name-like unless it is a known population, phase, form, route, timing, function, unit, salt or symptom word. So an unknown or unlisted name fails safe, whatever any list holds.
+
+The exceptions are:
+- an alias bracket that holds only known words, the drug's own name or short capitals ("(EFV)", "(CTM)");
+- a FORNAS form reset, only in FORNAS passages: form "1." before the entry's first strength, or the next form number, and not after a new numbered entry;
+- a count per administration after a ")" that closes a group opened before the name ("(Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet").
+
+A model-written combination's other name, after a strength or a separator, belongs to that partner. Only name words of four or more letters count as the drug's own, and a vitamin's letter code is its name. Column tables ("Parasetamol Ibuprofen 500 mg 400 mg") are not read.
+
+Review 6 closed every review-5 leak, and its findings were fixed in `ae480804`. Review 7 confirmed the review-6 rows closed and found only class-A items: a connector or "dosis anak" before an alias bracket, "dan" not separating a partner, the case and position of vitamin codes, pipe tables, and two fail-safe regressions. Those were fixed in the next commit, which has not had its own review. Replay: legacy 48, targeted 48. The two blanks against the 49/49 baseline:
+- impetigo amoxicillin-clavulanate: another drug's range, a correct block;
+- legacy isoniazid 300 mg: its only source is an MDR weight-band table "Isoniazid DT 300 mg **450 mg", where "DT" is unknown and 300 mg is one band. It fails safe.
+
+Budesonid regains its FORNAS citation.
+
+Fail-safe blanks by design:
+- a slash alternative ("Kloksasilin/Dikloksasilin 4 x 250-500 mg");
+- a bracket naming another drug ("seftriakson (diberikan bila alergi penisilin) 2 g");
+- indication words that are not on the known list ("bila demam 500 mg");
+- a strength written before the drug name.
+
+Accepted residuals:
+- FORNAS restriction prose that names another drug before the entry's first form, with no entry number ("amoksisilin. Alternatif: eritromisin. 1. tab 250 mg");
+- "(ipratropium atau salbutamol 2 puff) 4 puff" read as the group's count;
+- FORNAS form k+1 after another drug's name in garbled text ("zidovudin 1. tab 300 mg. lamivudin 2. tab 150 mg").
+
+The rule also blanks one more correct form on purpose: "amoksisilin dan asam klavulanat: dewasa 3x250-500 mg/hari" for a model "Amoxicillin clavulanate", because "X dan Y <dose>" can be Y's dose.
 
 **Live eval.** A third live run after the fixes (`live-after-targeted.*`) reached 8/61 cases (8 verified, 2 dose removed among them; $0.07). The new engine logging shows the cause of all three failed runs: the model provider returned `APIStatusError 402` (OpenRouter credit exhausted). The rate-limit reading in section 1 was wrong; the breaker fix (change 6) stands, because failed parallel copies of a part that succeeded used to count toward the 3 consecutive failures that pause model calls for 60 s. The live before/after, and the effect of change 5 (prompt), wait for Gaffer to top up the OpenRouter credit.
 
