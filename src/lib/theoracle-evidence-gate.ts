@@ -75,9 +75,16 @@ theOracleDiseases.forEach(d => new Set(tokens(d.nama)).forEach(word => catalogCo
 const GENERIC = new Set(["kronis", "infeksi", "tanpa", "dengan", "komplikasi", "lain", "lainnya", "pada", "anak", "dewasa", "umum", "tidak", "lokasi", "spesifik", "acute", "chronic", "disease", "infection", "syndrome", "disorder", "without", "complication", "unspecified", "specified", "other", "status", "type", "tipe", "primer", "sekunder", "adult", "child", "fever", "signs", "warning", "human", "virus", "organism", "origin", "site", "acquired", "upper", "lower", "tract", "essential", "primary", "secondary", "mild", "moderate", "severe", "recurrent", "bacterial", "viral", "elsewhere", "classified", "presumed", "nos", "nec"].map(spell));
 // The distinctive words of the diagnosis label and of the TheOracle catalog names for its code.
 // Short capitals such as HIV count too, but not Roman numerals (stage II) or the words of a label written all in capitals.
-const diagnosisWords = (diagnosis: { icd10: string; label: string }) => new Set([diagnosis.label, ...theOracleDiseases.filter(d => referenceIncludes(d.kode, diagnosis.icd10.trim().toUpperCase())).map(d => d.nama)]
-  .flatMap(name => [...tokens(name).filter(word => word.length >= 4 && (catalogCounts.get(word) ?? 0) < 3), ...(name === name.toUpperCase() ? [] : (name.match(/\b[A-Z]{2,}\b/g) ?? []).filter(word => !/^[IVXL]+$/.test(word)).flatMap(tokens))])
-  .filter(word => !GENERIC.has(word)));
+// ICD-10 2010 (the BPJS list) codes haemorrhoids I84; the catalog uses the later K64. Guidelines write ODHA (orang dengan HIV/AIDS) for HIV.
+const CATALOG_CODE: Record<string, string> = { I84: "K64" };
+const SYNONYMS: Record<string, string[]> = { hiv: ["odha"] };
+const diagnosisWords = (diagnosis: { icd10: string; label: string }) => {
+  const code = diagnosis.icd10.trim().toUpperCase();
+  const codes = [code, ...(CATALOG_CODE[code.slice(0, 3)] ? [CATALOG_CODE[code.slice(0, 3)]] : [])];
+  return new Set([diagnosis.label, ...theOracleDiseases.filter(d => codes.some(c => referenceIncludes(d.kode, c))).map(d => d.nama)]
+    .flatMap(name => [...tokens(name).filter(word => word.length >= 4 && (catalogCounts.get(word) ?? 0) < 3), ...(name === name.toUpperCase() ? [] : (name.match(/\b[A-Z]{2,}\b/g) ?? []).filter(word => !/^[IVXL]+$/.test(word)).flatMap(tokens))])
+    .filter(word => !GENERIC.has(word)).flatMap(word => [word, ...(SYNONYMS[word] ?? [])]));
+};
 const number = (value: string) => value.replace(/[.,]/g, "[.,]").replace(/\s+/g, "\\s*");
 // Each number of a pair needs its own match: the first stands alone or opens the same pair.
 // One tablet or capsule next to a strength such as 500 mg adds nothing to check: the 500 mg is the dose.

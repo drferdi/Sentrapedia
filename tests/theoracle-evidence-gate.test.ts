@@ -62,6 +62,14 @@ describe("clinical evidence gate", () => {
     expect(one("Betahistin", "3x6mg", "Pneumonia: Betahistin 6 tablet, lalu 12 mg.")).toBe("doseRemoved");
     expect(one("Betahistin", "3x6-8mg", "Pneumonia: Betahistin 3 x 6-12 mg.")).toBe("doseRemoved");
   });
+  it("reads ODHA as HIV and the catalog's K64 for haemorrhoids coded I84", () => {
+    const hiv = { icd10: "Z21", label: "Asymptomatic human immunodeficiency virus [HIV] infection status" };
+    const art = bundle({ title: "panduan-praktik-klinis.pdf", text: "Terapi ODHA: Efavirenz (EFV) 600 mg sekali sehari." });
+    expect(gateTherapy(therapy([drug("Efavirenz", "1x600mg")], { forDiagnosis: hiv }), art, hiv).report.drugs[0].status).toBe("verified");
+    const piles = { icd10: "I84.9", label: "Haemorrhoids, unspecified" };
+    const note = bundle({ title: "ambeien.md", text: "Ambeien derajat 1-2: Diosmin 500 mg 2 x sehari." });
+    expect(gateTherapy(therapy([drug("Diosmin", "2x500mg")], { forDiagnosis: piles }), note, piles).report.drugs[0].status).toBe("verified");
+  });
   it("blanks a dose whose strength is not in a passage naming the drug", () => {
     const { therapy: out, report } = gateTherapy(therapy([drug("Amoxicillin", "3x500mg")]), bundle("Amoksisilin 250 mg untuk anak."), pneumonia);
     expect(out?.regimen[0]).toMatchObject({ drug: "Amoxicillin", dose: "" });
