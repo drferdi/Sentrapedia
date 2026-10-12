@@ -41,7 +41,7 @@ describe("clinical evidence gate", () => {
     expect(gateTherapy(therapy([drug("Amoxicillin", "3x250mg")]), bulleted, pneumonia).report.drugs[0].status).toBe("doseRemoved");
   });
   it("keeps a strength listed after a long restriction or a numbered form of the same drug", () => {
-    const fornas = bundle("Pneumonia: fosfomisin trometamol untuk sistitis non komplikata pada wanita atau profilaksis pada tindakan Transrectal Prostat Biopsy (TR-PB) 1. granula 3 g  3 metenamin");
+    const fornas = bundle({ title: "fornas-2025.pdf", text: "Pneumonia: fosfomisin trometamol untuk sistitis non komplikata pada wanita atau profilaksis pada tindakan Transrectal Prostat Biopsy (TR-PB) 1. granula 3 g  3 metenamin" });
     expect(gateTherapy(therapy([drug("Fosfomisin trometamol", "1x3g")]), fornas, pneumonia).report.drugs[0].status).toBe("verified");
   });
   it("still reads tablet content after the next drug of a combination", () => {
@@ -108,6 +108,7 @@ describe("clinical evidence gate", () => {
   });
   it("never takes a number of a slash group, a partner's strength or a strength after another drug name", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    const fornas = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle({ title: "fornas-2025.pdf", text }), pneumonia).report.drugs[0].status;
     expect(one("Tenofovir", "1x600mg", "Pneumonia: tenofovir/lamivudin/efavirenz 300/300/600 mg")).toBe("doseRemoved");
     expect(one("Zidovudin", "2x150mg", "Pneumonia: zidovudin 300 mg/150 mg lamivudin")).toBe("doseRemoved");
     expect(one("Amoxicillin", "3x125mg", "Pneumonia: amoksisilin sirup 125 mg/5 mL")).toBe("verified");
@@ -120,14 +121,15 @@ describe("clinical evidence gate", () => {
     expect(one("Parasetamol", "3x300mg", "Pneumonia: parasetamol atau ibuprofen 200-400 mg")).toBe("doseRemoved");
     expect(one("Kalium klorida", "1x25mmol", "Pneumonia: kalium klorida 20 mmol; natrium 25 mmol")).toBe("doseRemoved");
     expect(one("Amoxicillin", "3x400mg", "Pneumonia: amoksisilin 500 mg ibuprofen 400 mg")).toBe("doseRemoved");
-    expect(one("Pilokarpin", "2x0,25%", "Pneumonia: 9 pilokarpin 1. tts mata 2% 2 btl/bulan. 10 timolol Dapat diberikan di FPKTP. 1. tts mata 0,25% 2 btl/bulan.")).toBe("doseRemoved");
-    expect(one("Travoprost", "1x0,004%", "Pneumonia: 11 travoprost Hanya untuk pasien yang tidak memberikan respons dengan timolol. 1. tts mata 0,004% 1 btl/bulan.")).toBe("verified");
+    expect(fornas("Pilokarpin", "2x0,25%", "Pneumonia: 9 pilokarpin 1. tts mata 2% 2 btl/bulan. 10 timolol Dapat diberikan di FPKTP. 1. tts mata 0,25% 2 btl/bulan.")).toBe("doseRemoved");
+    expect(fornas("Travoprost", "1x0,004%", "Pneumonia: 11 travoprost Hanya untuk pasien yang tidak memberikan respons dengan timolol. 1. tts mata 0,004% 1 btl/bulan.")).toBe("verified");
     expect(one("Kloksasilin", "4x500mg", "Pneumonia: Kloksasilin/Dikloksasilin 4 x 250-500 mg oral")).toBe("doseRemoved"); // a slash alternative may have its own dose (fails safe)
     expect(one("Karbogliserin", "3x2-3 tetes", "Pneumonia: (Karbogliserin / Gliserin 10% atau tetes telinga Natrium Dokusat 0.5%) 3 x 2-3 tetes sehari")).toBe("verified");
     for (const text of ["seftriakson, untuk pasien rawat inap: 1-2 g", "seftriakson, mula-mula 2 g", "seftriakson, nyeri ringan-sedang, 2 g"]) expect(one("Seftriakson", "1x2g", `Pneumonia: ${text}`)).toBe("verified");
   });
   it("takes a strength only for the drug named last before it; any unknown name fails safe", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    const fornas = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle({ title: "fornas-2025.pdf", text }), pneumonia).report.drugs[0].status;
     expect(one("Rifampisin", "1x300mg", "Pneumonia: rifampisin, INH 300 mg")).toBe("doseRemoved");
     expect(one("Zidovudin", "2x150mg", "Pneumonia: zidovudin bila Hb normal, lamivudin 150 mg")).toBe("doseRemoved");
     expect(one("Metformin", "1x5mg", "Pneumonia: metformin, bila gagal glibenklamid 5 mg")).toBe("doseRemoved");
@@ -138,9 +140,28 @@ describe("clinical evidence gate", () => {
     expect(one("Magnesium sulfat", "1x1g", "Pneumonia: magnesium sulfat loading, kalsium glukonat 1 g bila toksik")).toBe("doseRemoved");
     expect(one("Isosorbid dinitrat", "1x0,4mg", "Pneumonia: isosorbid dinitrat/nitrogliserin 0,4 mg SL")).toBe("doseRemoved");
     expect(one("Salbutamol", "4 puff", "Pneumonia: salbutamol 2 puff atau ipratropium 4 puff")).toBe("doseRemoved");
-    expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson (diberikan bila alergi penisilin) 2 g IV")).toBe("verified");
+    expect(one("Seftriakson", "1x2g", "Pneumonia: seftriakson (diberikan bila alergi penisilin) 2 g IV")).toBe("doseRemoved"); // a bracket naming another drug (fails safe)
     expect(one("Metformin", "1x2.000mg", "Pneumonia: metformin 500 mg, dinaikkan hingga 2.000 mg/hari")).toBe("verified");
-    expect(one("Budesonid", "1x0,25mg/mL", "Pneumonia: 2 budesonid 1. serb ih 200 mcg/dosis* Asma persisten berat: 2 tbg/bulan. Untuk rumatan asma (tidak untuk serangan asma akut). 2. cairan ih 0,25 mg/mL")).toBe("verified");
+    expect(fornas("Budesonid", "1x0,25mg/mL", "Pneumonia: 2 budesonid 1. serb ih 200 mcg/dosis* Asma persisten berat: 2 tbg/bulan. Untuk rumatan asma (tidak untuk serangan asma akut). 2. cairan ih 0,25 mg/mL")).toBe("verified");
+  });
+  it("reads a bracket, a partner, a short name, a vitamin code, a FORNAS form and a column table without leaking", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    const fornas = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle({ title: "fornas-2025.pdf", text }), pneumonia).report.drugs[0].status;
+    expect(one("Parasetamol", "3x400mg", "Pneumonia: parasetamol (atau ibuprofen) 400 mg")).toBe("doseRemoved");
+    expect(one("Isoniazid", "1x10mg", "Pneumonia: isoniazid (bersama piridoksin) 10 mg/hari")).toBe("doseRemoved");
+    expect(one("Diazepam", "0,2mg/kgBB", "Pneumonia: diazepam (alternatif midazolam) 0,2 mg/kgBB")).toBe("doseRemoved");
+    expect(one("Chlorpheniramine", "3x4mg", "Pneumonia: klorfeniramin maleat (CTM) 3 x 4 mg")).toBe("verified");
+    expect(one("Parasetamol/Ibuprofen", "3x400mg", "Pneumonia: parasetamol, ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Rifampisin + INH", "1x300mg", "Pneumonia: rifampisin, INH 300 mg")).toBe("doseRemoved");
+    expect(one("Vitamin B12", "1x10mg", "Pneumonia: vitamin B6 10 mg")).toBe("doseRemoved");
+    expect(one("Vitamin K", "1x500mg", "Pneumonia: vitamin K 1 mg, vitamin C 500 mg")).toBe("doseRemoved");
+    expect(one("Vitamin K", "1x1mg", "Pneumonia: vitamin K 1 mg, vitamin C 500 mg")).toBe("verified");
+    expect(one("Parasetamol", "3x50mg", "Pneumonia: parasetamol untuk demam; nyeri berat tramadol: 1. dewasa 50 mg")).toBe("doseRemoved");
+    expect(fornas("Parasetamol", "3x400mg", "Pneumonia: parasetamol 1. tab 500 mg. Ibuprofen 1. tab 400 mg")).toBe("doseRemoved");
+    expect(one("Ibuprofen", "3x500mg", "Pneumonia: Parasetamol Ibuprofen 500 mg 400 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x500mg", "Pneumonia: Parasetamol, demam ringan, 500 mg")).toBe("verified");
+    expect(one("Kotrimoksazol", "2x960mg", "Pneumonia: kotrimoksazol forte 960 mg")).toBe("verified");
+    expect(one("Zinc", "1x10mg", "Pneumonia: Suplementasi Zinc (khusus anak): 10 mg/hari (< 6 bulan)")).toBe("verified");
   });
   it("does not take a daily total as the amount of each of several doses", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
