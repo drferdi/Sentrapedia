@@ -26,7 +26,13 @@
   - Section 3 design items 1-4 are unchanged.
 - Review 4 of `16e83955` returned FIX with three new leak categories: slash-positional combination strengths, a model-written combined name, and a "+" partner with two strengths (REPORT section 6). Gaffer chose a drug-name lexicon: `2327700f` (837 words, `scripts/build-drug-words.mjs`), tests 89, replay 49/48. Review 5 returned FIX with three new categories: lexicon misses fail open (metformin, simvastatin, lamivudin, INH...), salt-only drug names, and slash alternatives with different doses. Gaffer then chose a per-strength fail-safe rule: `ea2fe8f8` (a strength counts only when the last name-like word before it is the drug's own; any unknown word fails safe; lexicon removed) and `ae480804` (review-6 fixes: alias bracket, partner after a separator, 4+ letter own names, vitamin codes, FORNAS form reset only in FORNAS passages, column tables). Review 7 (class A only) was fixed in the following commit, which has not been reviewed itself. Tests 91, gate test files 181/181, replay legacy 48 / targeted 48 (two fail-safe blanks, REPORT section 6).
 - Harness: `.runtime/audit/` (git-ignored), rows-review.json (49/49 baseline), rows-rereview.json, rows-round3.json.
-- Not pushed.
+- Published 2026-10-12 with Gaffer's approval ("commit and push"):
+  - The dose gate audit plan is now tracked: `docs/plans/active/Audit_actions.md` (`c1acef29`).
+  - Split `9a6e2dc0` (from `c1acef29`) was not a fast-forward of `sentrapedia/main` `c0ef8ba6`, because GitHub main holds the README edits. It was merged in the temporary worktree `D:\DEV\monorepo.worktrees\sentrapedia-publish` (only `README.md` differs from the split) and pushed as `cebb6753`, a fast-forward. No force push.
+  - Before the push, the repo was checked as private (the anonymous GitHub API returns 404), so `data/dose-inventory/iso_gap_fill.json` (ISO excerpts) is not public. A leak scan of the split found no key or token; the only env file is `.env.example`.
+  - GitHub reports 1 high Dependabot alert on the default branch (`security/dependabot/1`). It was not read, because `gh` is not authenticated.
+  - Main checkout `D:\DEV\monorepo` (`chore/tools-closeout`): the `tools/retriever` handoff edits were committed as `eefe8982`. The stale sentrapedia copies there (older `SOURCE.json` and `test_packaging.py`, the HANDOFF sections already ported, the `next-env.d.ts` dev touch, and the audit plan, now tracked) were stashed, not deleted: `stash@{0}` "superseded by feat/sentrapedia-dify-theoracle @c1acef29". The `next-env.d.ts` dev touch in this worktree was restored.
+  - Then this note was committed and published again with the same merge step.
 
 ## Dose gate audit, phase 2-3 (offline) - 2026-10-12 Asia/Jakarta
 
