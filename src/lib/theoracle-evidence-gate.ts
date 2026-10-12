@@ -1,6 +1,7 @@
 import type { MiraTherapy } from "./mira/contract";
 import { validTheOracleGrounding, type TheOracleGroundingBundle } from "./theoracle-grounding-types";
 import { referenceIncludes, theOracleDiseases } from "./theoracle";
+import drugWords from "./theoracle-drug-words.json";
 
 export type GateStatus = "verified" | "doseRemoved" | "removed";
 // `dose` (and `drug`) are the raw model strings, kept for audit only; never display them.
@@ -40,14 +41,14 @@ const COUNTED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?)$/i;
 // A range counts only as the drug's own first strength: "parasetamol 500 mg; ibuprofen 200-400 mg" does not dose parasetamol 300 mg.
 const FIRST_STRENGTH = new RegExp(STRENGTH.source, "i");
 // A daily total ("1 mg/hari", "0,5-1,5 mg per hari", "1 mg sehari", "/kgBB/24 jam", "dibagi dalam 3 dosis", "dosis harian 1 mg",
-// "sehari 1 mg") is not the amount of each of several doses (`several`, as in 3x1mg or 1mg 3 kali sehari), unless the source
+// "sehari 1 mg", "dalam 24 jam", "/hr") is not the amount of each of several doses (`several`, as in 3x1mg or 1mg 3 kali sehari), unless the source
 // writes a frequency of 2 or more before it ("3 x 500 mg/hari", "3 x 2-3 tetes sehari"). "500 mg sehari 3 kali", "3 kali
 // sehari 500 mg" and "500 mg/8 jam" are per dose.
 const FREQUENCY_BEFORE = new RegExp(String.raw`(?<![\d.,])(?:[2-9]|[1-9]\d+)\s*(?:[x×]|kali)\s*(?:sehari\s*)?(?:${NUMBER}${RANGE})?$`, "i");
 const DAILY = (text: string, from: number, at: number, end: number) => {
   const tail = text.slice(end).match(new RegExp(`^${PER}`, "i"))![0];
   const before = text.slice(Math.max(from, at - 30), at);
-  return /hari|24\s*jam/i.test(tail) || /^\s*(?:(?:sehari|per\s*hari)(?!\s*\d+\s*(?:[x×]|kali))|,?\s*(?:dibagi|terbagi))/i.test(text.slice(end + tail.length))
+  return /hari|24\s*jam/i.test(tail) || /^\s*(?:(?:sehari|per\s*hari)(?!\s*\d+\s*(?:[x×]|kali))|,?\s*(?:dibagi|terbagi)|\/\s*hr\b|dalam\s*24\s*jam)/i.test(text.slice(end + tail.length))
     || (/(?:sehari|harian|per\s*hari)\s*:?\s*$/i.test(before) && !/\d\s*(?:[x×]|kali)\s*sehari\s*:?\s*$/i.test(before));
 };
 const doses = (pattern: RegExp, text: string, from = 0, to = text.length, several = false) => [...text.matchAll(new RegExp(pattern.source, "gi"))]
@@ -92,25 +93,49 @@ const OWN_END = /(?:^|(?<!\d)\s)[A-Za-z][.)]\s|[•]|\n\s*-/;
 // and ", INH 300 mg" do not. The text right after the name is not checked, since a FORNAS restriction precedes the form, so two
 // names with no cut point between them ("Karbogliserin / Gliserin 10% ... 3 x 2-3 tetes") share one window. The window also ends
 // at the drug's next mention: "isosorbid mononitrat 20 mg dan isosorbid dinitrat 5 mg".
-const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "dosis", "maks", "maksimal", "maksimum", "awal", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "mulai", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "bb", "kgbb", "kg", "mg", "mcg", "ml", "iu", "unit", "gram", "juta", "ribu", "mmol", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "tunggal", "asam", "natrium", "kalium", "x",
+const ALLOWED = new Set(["anak", "dewasa", "lansia", "bayi", "neonatus", "remaja", "pediatrik", "wanita", "pria", "dosis", "maks", "maksimal", "maksimum", "awal", "kemudian", "lalu", "dilanjutkan", "selanjutnya", "pemeliharaan", "rumatan", "diberikan", "pemberian", "sebanyak", "setiap", "tiap", "selama", "sekali", "kali", "sehari", "harian", "hari", "minggu", "bulan", "tahun", "jam", "menit", "pagi", "siang", "sore", "malam", "sebelum", "sesudah", "setelah", "makan", "tidur", "mulai", "diulang", "dibagi", "terbagi", "dinaikkan", "ditingkatkan", "diturunkan", "dititrasi", "dapat", "bisa", "bila", "jika", "apabila", "perlu", "untuk", "pada", "bagi", "dengan", "dalam", "dan", "atau", "yang", "per", "sampai", "hingga", "sd", "ke", "di", "berat", "badan", "usia", "umur", "bb", "kgbb", "kg", "mg", "mcg", "ml", "iu", "unit", "gram", "juta", "ribu", "mmol", "tablet", "tab", "kapsul", "kaps", "kaplet", "sirup", "suspensi", "drop", "tetes", "injeksi", "inj", "infus", "salep", "krim", "gel", "larutan", "serbuk", "granul", "granula", "supositoria", "ampul", "vial", "oral", "intravena", "intramuskular", "subkutan", "rektal", "topikal", "inhalasi", "iv", "im", "sc", "po", "ih", "sl", "tunggal", "asam", "x", "serta", "pasien", "rawat", "inap", "jalan", "mula", "nyeri", "ringan", "sedang",
   // FORNAS form abbreviations ("1. tts mata 0,25%", "1. tab sal selaput 5 mg", "2. cairan ih 0,25 mg/mL")
   "tts", "mata", "telinga", "hidung", "sal", "salut", "selaput", "enterik", "serb", "cairan", "sir", "susp", "supp", "lar", "aerosol", "nebul", "film", "lepas", "lambat", "kunyah", "dispersibel", "btl", "tbg"].map(spell));
-const CUT = /;|,(?!\d)|\n|(?<!\d)\.\s|\+|(?<=\d\s*(?:mg|mcg|g|ml|iu|%))\s*\/(?!\s*(?:\d|kg|hari|ml|m2|dosis|kali|jam|menit|mnt|tab|kaps|vial|amp|dl\b|l\b))/gi;
-// A combination partner after "+" is masked rather than ending the window, so the product's shared count still reads:
-// "Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet" doses diosmin 3 x 2 tablet, never 50 mg.
-const ownEnd = (rest: string, own: string[]) => {
+const CUT = /;|,(?!\d)|\n|(?<!\d)\.\s|\+|\(|\b(?:atau|dan|serta)\b|(?<=\d\s*(?:mg|mcg|g|ml|iu|%))\s*\/(?!\s*(?:\d|kg|hari|ml|m2|dosis|kali|jam|menit|mnt|tab|kaps|vial|amp|dl\b|l\b))/gi;
+const CUT_ONE = new RegExp(CUT.source, "i");
+// Cut points before the drug's first strength are FORNAS restriction prose ("untuk sistitis ... atau profilaksis ... (TR-PB)
+// 1. granula 3 g") or a bracketed alias ("Efavirenz (EFV) 600 mg"); there only another drug name (below) ends the window.
+// A partner after "+", "atau", "dan" or "serta" has its strengths masked up to a hard cut point ("+ Hesperidin 50 mg atau
+// 100 mg"); a count per administration after it is shared: "(Karbogliserin / Gliserin 10% atau ... Natrium Dokusat 0.5%)
+// 3 x 2-3 tetes", "Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet".
+const PARTNER_END = /;|\n|(?<!\d)\.\s|\(|\+/;
+const SHARED = /(?:tablets?|tabs?|kaplets?|kapsul|kaps|capsules?|tetes|gtt|puff|semprotan|semprot|spray)$/i;
+// Drug-name words (PNPK, PPK and FORNAS names; scripts/build-drug-words.mjs). One such word that is not the drug's own ends the
+// window when a strength follows it before the next cut point, cut point or not before it ("amoksisilin 500 mg ibuprofen 400 mg",
+// a pdftotext table row), or when it opens a numbered FORNAS entry ("2 btl/bulan. 10 timolol"). Another drug named in a FORNAS
+// restriction ("respons dengan timolol. 1. tts mata 0,004%") and a slash alias ("Kloksasilin/Dikloksasilin 4 x 250-500 mg") do not.
+// A name missing from the list is not caught here; the cut-point rule above still applies to it.
+const DRUGS = new Set(drugWords.words.map(spell));
+// Masked strengths become spaces in place. A combination partner after "+", and a model-written combination's other name after
+// the first strength ("Parasetamol/Ibuprofen" against "parasetamol 500 mg; ibuprofen 400 mg"), have their strengths masked up to
+// the next cut point; a tablet count stays, so "Diosmin 450 mg + Hesperidin 50 mg) 3 x 2 tablet" doses diosmin 3 x 2 tablet.
+const ownEnd = (rest: string, own: string[], partners: string[]) => {
   const again = [...rest.matchAll(/\p{L}+/gu)].find(m => tokens(m[0]).includes(own[0]))?.index ?? -1;
   const masks: [number, number][] = [];
+  const nextCut = (at: number, cut = CUT_ONE) => { const i = rest.slice(at).search(cut); return i < 0 ? rest.length : at + i; };
+  const mask = (a: number) => { const b = nextCut(a + 1, PARTNER_END); for (const s of rest.slice(a, b).matchAll(STRENGTH)) if (!SHARED.test(s[3])) masks.push([a + s.index, a + s.index + s[0].length]); };
+  const opening = rest.search(FIRST_STRENGTH);
   let end = Math.min(...[rest.search(OWN_END), again].filter(i => i >= 0), rest.length);
   for (const m of rest.matchAll(CUT)) {
     if (m.index >= end) break;
-    if (masks.some(([a, b]) => m.index >= a && m.index < b)) continue;
+    if (m.index < opening) continue;
     const after = rest.slice(m.index + m[0].length);
     const strength = after.match(FIRST_STRENGTH);
     if (!strength || !tokens(after.slice(0, strength.index)).some(word => word.length >= 2 && !ALLOWED.has(word) && !own.includes(word))) continue;
-    if (m[0] !== "+") { end = m.index; break; }
-    masks.push([m.index, m.index + m[0].length + strength.index! + strength[0].length]);
+    if (!/^(?:\+|atau|dan|serta)$/i.test(m[0])) { end = m.index; break; }
+    mask(m.index);
   }
+  for (const w of rest.slice(0, end).matchAll(/\p{L}+/gu)) {
+    if (!tokens(w[0]).some(t => DRUGS.has(t) && !own.includes(t) && !ALLOWED.has(t)) || /\p{L}\s*\/\s*$/u.test(rest.slice(0, w.index))) continue;
+    if (rest.slice(w.index, nextCut(w.index + w[0].length)).search(FIRST_STRENGTH) >= 0 || /(?:^|\s)\d{1,3}\s+$/.test(rest.slice(0, w.index))) { end = w.index; break; }
+  }
+  const first = rest.slice(0, end).search(FIRST_STRENGTH);
+  if (first >= 0) for (const w of rest.slice(first, end).matchAll(/\p{L}+/gu)) if (tokens(w[0]).some(t => partners.includes(t))) mask(first + w.index);
   return { end, masks };
 };
 // The window opens after the drug's first name word, and only where the clause also holds its other name words, before or after
@@ -119,9 +144,10 @@ const ownEnd = (rest: string, own: string[]) => {
 const owned = (text: string, drug: string) => {
   const [first, ...rest] = names(unstrength(drug));
   const own = [first, ...tokens(unstrength(drug))];
+  const partners = rest.filter(word => !ALLOWED.has(word));
   return [...text.matchAll(/\p{L}+/gu)].filter(m => tokens(m[0]).includes(first)).flatMap(m => {
     const from = m.index + m[0].length;
-    const { end, masks } = ownEnd(text.slice(from, from + 200), own);
+    const { end, masks } = ownEnd(text.slice(from, from + 200), own, partners);
     const to = from + end;
     const clause = tokens(text.slice(Math.max(0, m.index - 60), m.index).split(/[;,\n]|\.\s/).at(-1) + " " + text.slice(from, to));
     const masked = masks.reduce((t, [a, b]) => t.slice(0, from + a) + " ".repeat(b - a) + t.slice(from + b), text);
@@ -152,6 +178,7 @@ const number = (value: string) => value.replace(/[.,]/g, "[.,]").replace(/\s+/g,
 // Per kg may follow another per-unit tail ("10 mg/hari/kgBB") or the other end of a range ("10 mg - 15 mg/kgBB").
 const PER_KG = String.raw`(?:${RANGE}${NUMBER}\s*[a-zµμ]+)?(?:\s*\/\s*(?:\d[\d.,]*\s*)?(?:hari|dosis|kali|jam|menit|mnt|detik)\b)*\s*(?:\/|per)\s*(?:kg|kilogram)`;
 // With `within`, a single strength also matches a source range around it (see `inside`); a model range keeps both ends exact.
+// A single strength never matches a number of a slash group: "300/300/600 mg" and "300 mg/150 mg" are positional.
 const strengths = (dose: string, percent = true, within = false) => {
   const text = dose.toLowerCase();
   const found = [...text.matchAll(STRENGTH)].filter(m => percent || m[3] !== "%");
@@ -159,11 +186,12 @@ const strengths = (dose: string, percent = true, within = false) => {
     const tail = new RegExp(`^${PER_KG}`).test(text.slice(m.index + m[0].length)) ? `(?=${PER_KG})` : `(?!${PER_KG})`;
     const unit = `\\s*${UNIT[m[3]]}${m[3] === "%" ? "" : "\\b"}${tail}`;
     if (within && !m[1]) {
-      const ranged = new RegExp(`(?<![\\d.,])(?:${number(m[2])}|(${NUMBER})${RANGE}(${NUMBER}))${unit}`, "i");
+      const ranged = new RegExp(`(?<![\\d.,]|\\/\\s*)(?:${number(m[2])}|(${NUMBER})${RANGE}(${NUMBER}))(?!\\s*\\/\\s*\\d)${unit}`, "i");
       inside.set(ranged, amount(m[2]));
       return [ranged];
     }
-    return [...(m[1] ? [`${number(m[1])}(?:(?:${RANGE}|\\s*\\/\\s*)${number(m[2])})?`] : []), number(m[2])].map(value => new RegExp(`(?<![\\d.,])${value}${unit}`, "i"));
+    if (!m[1]) return [new RegExp(`(?<![\\d.,]|\\/\\s*)${number(m[2])}(?!\\s*\\/\\s*\\d)${unit}`, "i")];
+    return [`${number(m[1])}(?:(?:${RANGE}|\\s*\\/\\s*)${number(m[2])})?`, number(m[2])].map(value => new RegExp(`(?<![\\d.,])${value}${unit}`, "i"));
   });
 };
 // Clauses end at ";", a newline, a "," that is not a decimal mark ("0,9%" stays whole) or a "." that ends a sentence ("maks. 4 g" stays whole).
@@ -208,8 +236,8 @@ export function gateTherapy(therapy: MiraTherapy, bundle: TheOracleGroundingBund
     const named = naming(r.drug);
     if (!named.length) return { drug: r.drug, dose: r.dose, status: "removed", evidenceIds: [] };
     const patterns = strengths(r.dose + " " + r.drug, true, true);
-    // "3x1mg", "2-3x2%", "1mg 3 kali sehari" and "1mg x 3" are several doses; the "x3" of "1x3g" is not a frequency.
-    const several = [...r.dose.matchAll(/(?<![\d.,])(\d+)\s*(?:[x×]|kali)|[x×]\s*(\d+)(?![\d.,]*\s*[a-zµμ%])/gi)].some(m => Number(m[1] ?? m[2]) >= 2);
+    // "3x1mg", "2-3x2%", "1mg 3 kali sehari", "1mg x 3" and "1mg tiap 8 jam" are several doses; the "x3" of "1x3g" is not a frequency.
+    const several = [...r.dose.matchAll(/(?<![\d.,])(\d+)\s*(?:[x×]|kali)|[x×]\s*(\d+)(?![\d.,]*\s*[a-zµμ%])|tiap\s*(\d+)\s*jam/gi)].some(m => m[3] ? Number(m[3]) < 24 : Number(m[1] ?? m[2]) >= 2);
     const dosing = patterns.length ? dosingFor(r.drug).filter(p => owned(p.text, r.drug).some(({ from, to, text }) => patterns.every(pattern => doses(pattern, text, from, to, several)))) : [];
     return dosing.length ? { drug: r.drug, dose: r.dose, status: "verified", evidenceIds: dosing.map(p => p.id) } : { drug: r.drug, dose: r.dose, status: "doseRemoved", evidenceIds: named.map(p => p.id) };
   });

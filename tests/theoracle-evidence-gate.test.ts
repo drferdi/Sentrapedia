@@ -106,6 +106,26 @@ describe("clinical evidence gate", () => {
     expect(one("Diosmin hesperidin", "2x500mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg (500 mg) 2 x sehari")).toBe("verified");
     for (const text of ["parasetamol, untuk dewasa 500 mg", "parasetamol, pada dewasa 500 mg", "parasetamol. Pemberian awal 500 mg", "parasetamol, pagi hari 500 mg"]) expect(one("Parasetamol", "3x500mg", `Pneumonia: ${text}`)).toBe("verified");
   });
+  it("never takes a number of a slash group, a partner's strength or a strength after another drug name", () => {
+    const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
+    expect(one("Tenofovir", "1x600mg", "Pneumonia: tenofovir/lamivudin/efavirenz 300/300/600 mg")).toBe("doseRemoved");
+    expect(one("Zidovudin", "2x150mg", "Pneumonia: zidovudin 300 mg/150 mg lamivudin")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x125mg", "Pneumonia: amoksisilin sirup 125 mg/5 mL")).toBe("verified");
+    expect(one("Parasetamol/Ibuprofen", "3x400mg", "Pneumonia: parasetamol 500 mg; ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Diosmin", "2x100mg", "Pneumonia: Diosmin 450 mg + Hesperidin 50 mg atau 100 mg")).toBe("doseRemoved");
+    expect(one("Kotrimoksazol", "2x80mg", "Pneumonia: kotrimoksazol 2 x 480 mg (trimetoprim 80 mg)")).toBe("doseRemoved");
+    expect(one("Metronidazol", "3x250mg", "Pneumonia: metronidazol 500 mg (atau tinidazol 250 mg)")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x400mg", "Pneumonia: parasetamol 500 mg atau ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x400mg", "Pneumonia: parasetamol dan ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Parasetamol", "3x300mg", "Pneumonia: parasetamol atau ibuprofen 200-400 mg")).toBe("doseRemoved");
+    expect(one("Kalium klorida", "1x25mmol", "Pneumonia: kalium klorida 20 mmol; natrium 25 mmol")).toBe("doseRemoved");
+    expect(one("Amoxicillin", "3x400mg", "Pneumonia: amoksisilin 500 mg ibuprofen 400 mg")).toBe("doseRemoved");
+    expect(one("Pilokarpin", "2x0,25%", "Pneumonia: 9 pilokarpin 1. tts mata 2% 2 btl/bulan. 10 timolol Dapat diberikan di FPKTP. 1. tts mata 0,25% 2 btl/bulan.")).toBe("doseRemoved");
+    expect(one("Travoprost", "1x0,004%", "Pneumonia: 11 travoprost Hanya untuk pasien yang tidak memberikan respons dengan timolol. 1. tts mata 0,004% 1 btl/bulan.")).toBe("verified");
+    expect(one("Kloksasilin", "4x500mg", "Pneumonia: Kloksasilin/Dikloksasilin 4 x 250-500 mg oral")).toBe("verified");
+    expect(one("Karbogliserin", "3x2-3 tetes", "Pneumonia: (Karbogliserin / Gliserin 10% atau tetes telinga Natrium Dokusat 0.5%) 3 x 2-3 tetes sehari")).toBe("verified");
+    for (const text of ["seftriakson, untuk pasien rawat inap: 1-2 g", "seftriakson, mula-mula 2 g", "seftriakson, nyeri ringan-sedang, 2 g"]) expect(one("Seftriakson", "1x2g", `Pneumonia: ${text}`)).toBe("verified");
+  });
   it("does not take a daily total as the amount of each of several doses", () => {
     const one = (name: string, dose: string, text: string) => gateTherapy(therapy([drug(name, dose)]), bundle(text), pneumonia).report.drugs[0].status;
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
@@ -118,6 +138,10 @@ describe("clinical evidence gate", () => {
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin sehari 0,5-1,5 mg.")).toBe("doseRemoved");
     expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg dibagi dalam 3 dosis.")).toBe("doseRemoved");
     expect(one("Kolkisin", "1x3mg", "Pneumonia: kolkisin 3 mg sekali sehari.")).toBe("verified");
+    expect(one("Kolkisin", "1mg tiap 8 jam", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "1mg tiap 24 jam", "Pneumonia: kolkisin 0,5-1,5 mg/hari.")).toBe("verified");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg dalam 24 jam.")).toBe("doseRemoved");
+    expect(one("Kolkisin", "3x1mg", "Pneumonia: kolkisin 0,5-1,5 mg/hr.")).toBe("doseRemoved");
     expect(one("Kolkisin", "3x0,5mg", "Pneumonia: kolkisin 3 kali sehari 0,5 mg.")).toBe("verified");
     expect(one("Parasetamol", "3x500mg", "Pneumonia: parasetamol 500 mg sehari 3 kali.")).toBe("verified");
     expect(one("Amoxicillin", "3x500mg", "Pneumonia: amoksisilin 500 mg/8 jam.")).toBe("verified");
