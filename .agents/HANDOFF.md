@@ -6,7 +6,7 @@
 - Live 61-case eval failed twice (18/61, 12/61; about $0.29). The MIRA API-error breaker opened after consecutive provider errors and paused calls for 60 s. It counts failed parallel copies too; the provider error type is not logged. Committed eval files were restored after each run.
 - Offline harness in `.runtime/audit/` (git-ignored): `extract.py`, `replay.test.ts` (run with `REPLAY_IN`/`REPLAY_OUT` and `npx vitest run .runtime/audit/replay.test.ts`), `corpus_scan.py`, `classify.py`. It reproduces the 2026-10-11 replay exactly: 42 verified on both paths.
 - Result in `docs/verification/dose-gate-audit-2026-10-12/` (`REPORT.md`, `classification-targeted.json`): 29 non-verified targeted drugs. 20 are correct blocks (A 5, E 2, F 1, G 1, H1 6, H2 5); 9 are correct doses not shown (B 3, D 6). Confirmed defect: `spell()` maps "ch" to "kh", so chlorpheniramine never matches klorfeniramin.
-- Verified doses (42): no unsupported number. Design limits: a concentration or a FORNAS strength counts as a dose, frequency is not checked, population is not checked.
+- Verified doses (42): one unsupported, lamivudin 300 mg verified by zidovudin 300 mg in the same FORNAS passage. Design limits: a concentration or a FORNAS strength counts as a dose, frequency is not checked, population is not checked.
 - No code changed. Six bounded corrections are proposed in REPORT section 4, awaiting Gaffer.
 - Not done: live reproduction, the 10-disease benchmark (phase 4).
 - Not pushed.

@@ -32,7 +32,11 @@ Secondary finding: haemorrhoids are coded I84.9 with the English label, while th
 
 ## 3. Phase 3: the 42 verified targeted doses
 
-Every verified number occurs in a passage that names the drug and the diagnosis; no fabricated or unsupported number was found. The weaknesses are of the design, not of the regex:
+Every verified number occurs in a passage that names the drug and the diagnosis. A check of all 84 verified rows (both paths) for the strength within 110 characters after the drug name flagged 11; reading them leaves **one unsupported dose**:
+
+0. **A strength of another drug in the same passage verifies the dose.** Lamivudin 1 x 300 mg (HIV, targeted) is verified by FORNAS KDT passages where 300 mg belongs to zidovudin and lamivudin is 150 mg. 300 mg once daily is a usual adult dose, but the cited evidence does not support it, and the same rule would verify a wrong number. The other 10 flags are spelling (Paracetamol/parasetamol, Ofloxacin, Hydrocortisone, Pyrazinamide) or table layouts where the number sits in the drug's own row (TB weight bands, renal table).
+
+The other weaknesses are of the design, not of the regex:
 
 1. **A concentration counts as a dose.** budesonid "0.25 mg/mL" for asthma (FORNAS nebule strength), with no amount per administration.
 2. **A formulation strength counts as a regimen.** FORNAS lists verify olanzapin 5 mg, fosfomisin 3 g, timolol 0.25%; the numbers fit usual doses here, but the cited text is a strength list.
@@ -45,12 +49,15 @@ Every verified number occurs in a passage that names the drug and the diagnosis;
 |---|---|---|---|---|
 | 1 | `spell`: "ch" -> "k" before the "c" rules | gate | chlorpheniramine removed -> dose removed (its 3 x 4 mg chunk was not retrieved) | Low |
 | 2 | Targeted gate reads therapy bundle + diagnosis bundle | gateway, gate call only | +2 verified (tenofovir, amoxicillin-clavulanate) | Low: same passage rules |
-| 3 | A single model strength inside a source range of the same unit and per-kg status verifies | gate | +4 verified (betahistin x2, sertralin, diazepam) | Medium: needs tests that a range in another clause or for another drug does not count |
+| 3 | A single model strength inside a source range verifies, when the range is one strength occurrence with the same unit and per-kg status (not a "6" and a "mg" found apart). Open: whether a narrower model range ("6-8 mg" vs "6-12 mg") verifies when both ends fall inside | gate | +4 verified (betahistin x2, sertralin, diazepam) | Medium: needs tests that a range in another clause or for another drug does not count |
 | 4 | Diagnosis synonyms (ODHA = HIV; hemoroid = haemorrhoids, I84 = K64) | gate | +1 (efavirenz) | Medium: a word list to maintain |
 | 5 | Therapy prompt: `dose` must hold the amount or concentration | MIRA prompt (pinned in `SOURCE.json`) | Fewer H2 rows on new replies; no replay effect | Medium: engine change, live eval needed |
 | 6 | Breaker counts one failure per request, not per parallel copy; log the provider error type | MIRA engine | Unblocks the live eval | Low-medium: engine change |
+| 7 | A strength verifies only from the drug's own clause or table row, not from anywhere in the passage | gate | Lamivudin 300 mg -> dose removed; other effects unknown until replayed | Medium: tables and lists need care |
 
-Changes 1-3 together would take the replay from 42 to an expected 48 verified on the targeted path, with no relaxed rule for a passage about another disease. Retrieval for metformin (B) and the design limits in section 3 need a separate decision.
+Projection, not measurement: changes 1-3 would take the targeted replay from 42 to about 48 verified. Only change 2 is measured (+2: these rows verify when the diagnosis bundle is added). Changes 1 and 3 are inferred from the forced-about test and the corpus check, and each will be measured by replaying the same 122 replies before it is committed, as earlier gate changes were. That offline replay is the before/after for the gate changes; a live run waits for change 6. Retrieval for metformin (B) and the design limits in section 3 need a separate decision.
+
+The harness scripts are copied to `harness/` (`replay.test.ts.txt` is renamed so `npm test` does not collect it).
 
 ## 5. Not done
 
