@@ -34,6 +34,17 @@ describe("direct main-composer analysis", () => {
     await expect(requestMiraAnalysis(caseData, { synthetic: true, fetchFn: async () => { calls++; return Response.json({ error: { code: "TIMEOUT", message: "Analisis melewati batas waktu layanan." } }, { status: 504 }); } })).rejects.toThrow("Analisis melewati batas waktu layanan.");
     expect(calls).toBe(1);
   });
+  it("keeps the server's error code on the thrown error so the UI can tell causes apart", async () => {
+    const fetchFn = async () => Response.json({ error: { code: "NOT_CONFIGURED", message: "Layanan analisis belum dikonfigurasi." } }, { status: 503 });
+    await expect(requestMiraAnalysis(caseData, { synthetic: true, fetchFn })).rejects.toMatchObject({ code: "NOT_CONFIGURED", message: "Layanan analisis belum dikonfigurasi." });
+    const bare = async () => Response.json({}, { status: 500 });
+    await expect(requestMiraAnalysis(caseData, { synthetic: true, fetchFn: bare })).rejects.toMatchObject({ code: undefined, message: "Analisis belum tersedia. Keluhan tetap tersedia." });
+  });
+  it("turns a lost connection or unreadable body into the service wording instead of the browser's", async () => {
+    const offline: typeof fetch = async () => { throw new TypeError("Failed to fetch"); };
+    const html: typeof fetch = async () => new Response("<html>gateway</html>", { status: 502 });
+    for (const fetchFn of [offline, html]) await expect(requestMiraAnalysis(caseData, { synthetic: true, fetchFn })).rejects.toThrow("Layanan analisis tidak dapat dihubungi atau respons tidak dapat dibaca.");
+  });
   it("rejects unavailable or malformed output and invalid trace dates", async () => {
     for (const data of [{ ...response, result: { ...response.result, status: "unavailable" } }, { ...response, createdAt: "invalid" }, { ...response, result: {} }, { ...response, grounding: { ...grounding, evidence: [] } }]) await expect(requestMiraAnalysis(caseData, { synthetic: true, fetchFn: async () => Response.json(data) })).rejects.toThrow("Respons analisis tidak dapat diverifikasi.");
   });
@@ -79,10 +90,10 @@ describe("therapy that arrives without a gate report", () => {
     expect(other.result.therapy).toBeUndefined();
     expect(other.evidenceGate?.therapyRemoved).toBe(true);
   });
-  it("is left as the server sent it when a gate report is present", async () => {
+  it("re-checks a server gate report with the one strict rule and downgrades a dose its evidence does not support", async () => {
     const evidenceGate = { forDiagnosis: therapy.forDiagnosis, therapyRemoved: false, reason: "", drugs: [{ drug: "Paracetamol", dose: "3x500mg", status: "verified", evidenceIds: ["P001-001"] }] };
     const analysis = await run(withTherapy({ therapyGrounding: tx, evidenceGate }));
-    expect(analysis.result.therapy?.regimen[0].dose).toBe("3x500mg");
-    expect(analysis.evidenceGate).toEqual(evidenceGate);
+    expect(analysis.result.therapy?.regimen[0]).toMatchObject({ drug: "Paracetamol", dose: "" });
+    expect(analysis.evidenceGate).toEqual({ ...evidenceGate, drugs: [{ ...evidenceGate.drugs[0], status: "doseRemoved" }] });
   });
 });

@@ -174,7 +174,7 @@ flowchart TB
 <table width="100%">
 <tr>
 <td width="50%" valign="top"><small><b><code>01 · WORKSPACE</code></b></small><br /><small>Fictional patients, lists, encounters, tasks, templates, draft review and backups.</small><br /><sub>IMPLEMENTED · src/components · src/lib/workspace.ts</sub></td>
-<td width="50%" valign="top"><small><b><code>02 · ORACLE CATALOG</code></b></small><br /><small>144 disease records across 15 categories, searchable by name, code and category.</small><br /><sub>IMPLEMENTED · oracle/sentrapedia.json · src/lib/oracle.ts</sub></td>
+<td width="50%" valign="top"><small><b><code>02 · ORACLE CATALOG</code></b></small><br /><small>144 disease records across 15 categories, searchable by name, code and category.</small><br /><sub>IMPLEMENTED · oracle/sentrapedia.json · src/lib/theoracle.ts</sub></td>
 </tr>
 <tr>
 <td width="50%" valign="top"><small><b><code>03 · THEORACLE</code></b></small><br /><small>Local vector retrieval (EmbeddingGemma-300m on this machine) with index, model and per-passage hashes and bounded passages.</small><br /><sub>IMPLEMENTED · theoracle · src/lib/theoracle-grounding.ts</sub></td>
@@ -194,7 +194,7 @@ flowchart TB
 | <small>18 built-in document modes</small> | <small>IMPLEMENTED</small> | <small>`src/lib/drafts.ts`</small> | <small>Not every mode uses AI</small> |
 | <small>Five MIRA-routed modes: question, DDx, workup, referral review, ICD-10</small> | <small>IMPLEMENTED</small> | <small>`src/lib/mira/composer.ts`</small> | <small>Fictional cases only</small> |
 | <small>Templates, revisions, checklist, export</small> | <small>IMPLEMENTED</small> | <small>`src/lib/workflow.ts` · `src/components/workspace.tsx`</small> | <small>Review status is not clinical authorization</small> |
-| <small>Oracle local disease search</small> | <small>IMPLEMENTED</small> | <small>`src/lib/oracle.ts`</small> | <small>Narratives not certified PNPK citations</small> |
+| <small>Oracle local disease search</small> | <small>IMPLEMENTED</small> | <small>`src/lib/theoracle.ts`</small> | <small>Narratives not certified PNPK citations</small> |
 | <small>TheOracle grounding / provenance</small> | <small>IMPLEMENTED</small> | <small>`src/lib/theoracle-grounding.ts`</small> | <small>Unreviewed candidates not approved clinical facts</small> |
 | <small>Managed MIRA standalone lifecycle</small> | <small>HISTORICALLY VERIFIED</small> | <small>`docs/verification/2026-10-10-integrated-mira.md`</small> | <small>Local/extracted runtime proof only</small> |
 | <small>Optional browser dictation</small> | <small>IMPLEMENTED</small> | <small>`src/components/use-dictation.ts`</small> | <small>Vendor-dependent speech privacy</small> |
@@ -258,7 +258,7 @@ flowchart TB
 
 `npm ci --workspaces=false` installs Node dependencies and the locked Python environment in `.runtime/mira/venv`. `scripts/run-system.mjs` then checks public model metadata, generates a private loopback token and port, starts MIRA, verifies its profile/grounding capability, and launches the web interface. Historical connection settings are overridden in memory; a sibling MIRA repository is not required. See [the current integration contract](docs/mira-integration.md).
 
-**Model selection:** `google/gemini-2.5-flash` is configured for planning and assessment through OpenRouter, alongside provisional differentials, fast assessment/therapy and throughput routing. Configured guards include **US$0.10 per step**, **US$5 daily ledger**, **20-second engine deadline**, and **135-second gateway deadline**. These are limits and targets, **not guaranteed speed or charges**. The launcher sets `MIRA_OPENROUTER_ZDR=false`: zero-data-retention protection must not be assumed. [Source](scripts/mira-runtime.mjs).
+**Model selection:** `gemini-3.1-flash-lite` is configured for planning and assessment, called directly on the Gemini API with `GEMINI_API_KEY` (no OpenRouter), alongside provisional differentials and fast assessment/therapy (`fastCopies` in `scripts/mira-profile.json` sets how many copies of each raced part are sent; the engine default is 3). Configured guards include **US$0.10 per step**, **US$5 daily ledger**, **20-second engine deadline**, and **45-second gateway deadline** (65 seconds on the default targeted path, which runs two steps). These are limits and targets, **not guaranteed speed or charges**. Zero-data-retention protection must not be assumed. [Source](scripts/mira-runtime.mjs).
 
 
 ### Clinical inquiry modes
@@ -299,7 +299,7 @@ Sentrapedia/
 │   ├── app/icon.png             # Product icon, Git LFS
 │   ├── components/              # Clinical UI
 │   ├── lib/mira/                # Client, contract, gateway, presentation
-│   ├── lib/oracle-grounding.ts  # Read-only retrieval
+│   ├── lib/theoracle-grounding.ts  # Read-only retrieval
 │   └── app/sentra-tokens.css    # Local token snapshot
 ├── oracle/                      # Disease reference JSON
 ├── theoracle/                   # TheOracle: index (chunks, vectors, manifest), model (installed), provenance
@@ -373,7 +373,7 @@ A useful result is more than generated prose. Review the **case context** suppli
 
 - **Node.js 24+**, **Python 3.11+** with venv support, and npm (contract specifies version 11.19.0).
 - npm/PyPI installation access; OpenRouter public metadata endpoints must be reachable on startup.
-- Server-side `OPENROUTER_API_KEY` and available OpenRouter access/credit for AI analysis.
+- Server-side `GEMINI_API_KEY` (paid tier) with Gemini API billing enabled for AI analysis.
 - A local machine; the default HTTP listener is `127.0.0.1:3101`. This repository is private and requires authorized GitHub access.
 
 ### Install
@@ -384,13 +384,13 @@ cd Sentrapedia
 npm ci --workspaces=false
 ```
 
-Create `.env.local` using the keys shown in `.env.example`, or inject `OPENROUTER_API_KEY` into the process environment. Never commit real keys. The supervisor generates the internal MIRA URL/token automatically; do not configure an external MIRA checkout.
+Create `.env.local` using the keys shown in `.env.example`, or inject `GEMINI_API_KEY` into the process environment. Never commit real keys. The supervisor generates the internal MIRA URL/token automatically; do not configure an external MIRA checkout.
 
 ### Configuration
 
 | <small>Variable / file</small> | <small>Required</small> | <small>Purpose</small> | <small>Boundary</small> |
 |---|---|---|---|
-| <small>`OPENROUTER_API_KEY`</small> | <small>Yes for integrated runtime</small> | <small>Provider credential</small> | <small>Server only, secret</small> |
+| <small>`GEMINI_API_KEY`</small> | <small>Yes for integrated runtime</small> | <small>Provider credential</small> | <small>Server only, secret</small> |
 | <small>`.env.local`</small> | <small>Optional file</small> | <small>Capsule-local process settings</small> | <small>Keep out of version control</small> |
 | <small>`PORT`</small> | <small>No</small> | <small>Web port, default 3101</small> | <small>Local listener</small> |
 | <small>`SENTRAPEDIA_HOST`</small> | <small>No</small> | <small>Web host, default 127.0.0.1</small> | <small>Wider exposure adds risk, not authentication</small> |
@@ -480,7 +480,7 @@ The diagram states **required future controls**, not completed certifications or
 |---|---|---|
 | <small>Installed profile</small> | <small>`npm run system:check`</small> | <small>Local runtime/provider preflight</small> |
 | <small>Typecheck</small> | <small>`npm run typecheck`</small> | <small>`tsc --noEmit`</small> |
-| <small>Lint</small> | <small>`npm run lint`</small> | <small>`eslint src tests`</small> |
+| <small>Lint</small> | <small>`npm run lint`</small> | <small>`eslint src tests scripts` plus the site's syntax lint</small> |
 | <small>App tests</small> | <small>`npm test`</small> | <small>Vitest; excludes .runtime backups</small> |
 | <small>System tests</small> | <small>`npm run test:system`</small> | <small>Node lifecycle and policy checks</small> |
 | <small>MIRA tests</small> | <small>`npm run test:mira`</small> | <small>Mocked Python service tests</small> |
@@ -636,7 +636,7 @@ No external sponsor is declared for this product. Sentrapedia is developed under
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="https://img.shields.io/badge/03-BACKEND%20%26%20API-14B8A6?style=flat-square" alt="Backend API" /><br /><small><b><code>BACKEND & API</code></b></small><br /><small>Next.js same-origin gateway, FastAPI, Uvicorn and contract-v1 JSON schemas.</small></td>
-<td width="50%" valign="top"><img src="https://img.shields.io/badge/04-AI%20%C2%B7%20AUTOMATION-8B5CF6?style=flat-square" alt="AI automation" /><br /><small><b><code>AI · AUTOMATION</code></b></small><br /><small>MIRA, Gemini 2.5 Flash, OpenRouter, model-profile, cost and grounding guards.</small></td>
+<td width="50%" valign="top"><img src="https://img.shields.io/badge/04-AI%20%C2%B7%20AUTOMATION-8B5CF6?style=flat-square" alt="AI automation" /><br /><small><b><code>AI · AUTOMATION</code></b></small><br /><small>MIRA, Gemini 3.1 Flash-Lite, Gemini API, model-profile, cost and grounding guards.</small></td>
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="https://img.shields.io/badge/05-DATABASE%20%26%20STORAGE-0EA5E9?style=flat-square" alt="Database storage" /><br /><small><b><code>DATABASE & STORAGE</code></b></small><br /><small>TheOracle read-only vector index, Oracle catalog JSON, browser localStorage and audit files.</small></td>

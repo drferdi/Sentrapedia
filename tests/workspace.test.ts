@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { initialWorkspace, newEncounter, workspaceReducer, restoreWorkspace } from "../src/lib/workspace";
+import { initialWorkspace, loadWorkspace, newEncounter, parseWorkspace, workspaceReducer, restoreWorkspace } from "../src/lib/workspace";
 import { createDraft, modes } from "../src/lib/drafts";
 import { greeting } from "../src/lib/ui-labels";
 
@@ -87,8 +87,20 @@ describe("storage validation", () => {
     expect(restoreWorkspace(JSON.stringify({ ...initialWorkspace, encounters: [{ id: "x", messages: null }] }))).toEqual(initialWorkspace);
     expect(restoreWorkspace(JSON.stringify({ ...initialWorkspace, settings: { model: "unknown" } }))).toEqual(initialWorkspace);
   });
+  it("keeps saved text it cannot read so the caller can back it up instead of losing it", () => {
+    expect(loadWorkspace(null)).toEqual({ workspace: initialWorkspace, unreadable: null });
+    const saved = JSON.stringify({ ...initialWorkspace, settings: { ...initialWorkspace.settings, language: "English" } });
+    expect(loadWorkspace(saved)).toEqual({ workspace: restoreWorkspace(saved), unreadable: null });
+    const future = JSON.stringify({ ...initialWorkspace, version: 2 });
+    for (const raw of ["{broken", future]) expect(loadWorkspace(raw)).toEqual({ workspace: initialWorkspace, unreadable: raw });
+  });
   it("round-trips a complete workspace", () => {
     expect(restoreWorkspace(JSON.stringify(initialWorkspace))).toEqual(initialWorkspace);
+  });
+  it("accepts an exported backup for import and reports anything else as invalid", () => {
+    const backup = workspaceReducer(initialWorkspace, { type: "patient.add", patient: { id: "p-import", name: "Pasien Fiktif Impor", age: "40", sex: "Male", notes: "" } });
+    expect(parseWorkspace(JSON.stringify(backup, null, 2))).toEqual(restoreWorkspace(JSON.stringify(backup)));
+    for (const raw of ["{broken", "[]", JSON.stringify({ ...backup, version: 2 }), JSON.stringify({ ...backup, patients: [{ id: 1 }] })]) expect(parseWorkspace(raw)).toBeNull();
   });
   it("keeps a saved greeting name and drops one that is not text", () => {
     const named = { ...initialWorkspace, settings: { ...initialWorkspace.settings, name: "dr. Rani" } };

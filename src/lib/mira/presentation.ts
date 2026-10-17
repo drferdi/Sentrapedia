@@ -5,7 +5,7 @@ import { newId, type Message } from "../workspace";
 import type { ModeId } from "../drafts";
 import { freshReview, type ReviewItem } from "../workflow";
 import { validTheOracleGrounding, type TheOracleGroundingBundle } from "../theoracle-grounding-types";
-import { gateEvidence, gateTherapy, unstrength, validGate, type EvidenceGateReport, type GateStatus } from "../theoracle-evidence-gate";
+import { applyTherapyGate, gateEvidence, unstrength, validGate, type EvidenceGateReport, type GateStatus } from "../theoracle-evidence-gate";
 
 const gateLine: Record<GateStatus, string> = { verified: "dosis terverifikasi", doseRemoved: "dosis tidak ditemukan di TheOracle, cek pedoman", removed: "tidak ditampilkan, indikasi tidak terverifikasi di TheOracle" };
 const passages = (bundle: TheOracleGroundingBundle) => bundle.evidence.map(item => `- ${item.source.title} [${item.evidenceId}] · kemiripan ${item.similarity}\n  ${item.text}`).join("\n\n");
@@ -14,7 +14,15 @@ export function theOracleCitations(grounding: unknown, therapyGrounding?: unknow
   if (!validTheOracleGrounding(grounding)) return "";
   const therapy = validTheOracleGrounding(therapyGrounding) ? "\n\nReferensi terapi (dicari memakai diagnosis):\n\n" + passages(therapyGrounding) : "";
   const verification = validGate(gate) ? "\n\n## Verifikasi terapi\n\n" + [gate.reason, ...gate.drugs.map(d => `- ${d.status === "verified" ? d.drug : unstrength(d.drug)}: ${gateLine[d.status]}${d.status === "verified" && d.evidenceIds.length ? ` [${d.evidenceIds.join(", ")}]` : ""}`)].filter(Boolean).join("\n") : "";
-  return "\n\n---\n\n## Referensi TheOracle\n\nReferensi yang dipilih sebelum analisis:\n\n" + passages(grounding) + therapy + verification;
+  return `\n\n---\n\n## ${theOracleReferencesTitle}\n\nReferensi yang dipilih sebelum analisis:\n\n` + passages(grounding) + therapy + verification;
+}
+
+export const theOracleReferencesTitle = "Referensi TheOracle";
+export interface TheOracleReferenceItem { id: string; title: string; similarity: string; text: string }
+// The passages of a "Referensi TheOracle" section, diagnosis then therapy, each passage once; the document text stays as written.
+export function theOracleReferenceItems(body: string): TheOracleReferenceItem[] {
+  const items = [...body.matchAll(/^- (.+) \[([^\]\n]+)\] · kemiripan ([\d.]+)\r?\n {2}(.*)$/gm)].map(([, title, id, similarity, text]) => ({ id, title, similarity, text: text.trim() }));
+  return items.filter((item, index) => items.findIndex(other => other.id === item.id) === index);
 }
 
 export function theOracleSourceLinks(message: Pick<Message, "sourceText">) {
@@ -22,7 +30,9 @@ export function theOracleSourceLinks(message: Pick<Message, "sourceText">) {
     const source: unknown = JSON.parse(message.sourceText ?? "null");
     if (!source || typeof source !== "object" || !("grounding" in source) || !validTheOracleGrounding(source.grounding)) return [];
     const bundles = [source.grounding, ...("therapyGrounding" in source && validTheOracleGrounding(source.therapyGrounding) ? [source.therapyGrounding] : [])];
-    return bundles.flatMap(bundle => bundle.evidence.map(item => ({ id: item.evidenceId, label: item.source.title, text: item.text })));
+    // Diagnosis and therapy retrieval can return the same passage; it is listed once.
+    const links = bundles.flatMap(bundle => bundle.evidence.map(item => ({ id: item.evidenceId, label: item.source.title, text: item.text })));
+    return links.filter((link, index) => links.findIndex(other => other.id === link.id) === index);
   } catch { return []; }
 }
 
@@ -140,7 +150,19 @@ export function miraDraft(result: MiraResult, traceId: string, createdAt: string
   return ["# Analisis kasus", ...(listedCodes.size ? [] : ["Belum ada kandidat diagnosis dari keluhan ini. Tambahkan anamnesis atau pemeriksaan untuk analisis yang lebih tajam."]), (focus === "workup" ? [parts[3], ...parts.filter((_, i) => i !== 3)] : focus === "refer" ? [referral, ...parts] : focus === "icd10" ? [coding, ...parts] : parts).map(([title, body]) => `## ${title}\n\n${body}`).join("\n\n---\n\n")].join("\n\n");
 }
 
-export function diagnosisContent(message: Pick<Message, "content" | "originalContent" | "sourceText"> & Partial<Pick<Message, "mode">>): string {
+type ContentSource = Pick<Message, "content" | "originalContent" | "sourceText"> & Partial<Pick<Message, "mode">>;
+// Every render asks for each card's view; parsing the source and re-running the gate once per unchanged message is enough.
+const derived = new WeakMap<ContentSource, { content: string; originalContent?: string; sourceText?: string; mode?: string; view: string }>();
+
+export function diagnosisContent(message: ContentSource): string {
+  const hit = derived.get(message);
+  if (hit && hit.content === message.content && hit.originalContent === message.originalContent && hit.sourceText === message.sourceText && hit.mode === message.mode) return hit.view;
+  const view = deriveContent(message);
+  derived.set(message, { content: message.content, originalContent: message.originalContent, sourceText: message.sourceText, mode: message.mode, view });
+  return view;
+}
+
+function deriveContent(message: ContentSource): string {
   // Untouched analysis drafts always show in the current format; edited drafts stay as written.
   if (!hasMiraSource(message) || message.content !== message.originalContent || !message.content.startsWith("# Analisis kasus\n")) return message.content;
   try {
@@ -151,19 +173,12 @@ export function diagnosisContent(message: Pick<Message, "content" | "originalCon
     const stored = "evidenceGate" in source && validGate(source.evidenceGate) ? source.evidenceGate : undefined;
     // Saved therapy is gated again with the current gate against its stored bundle, as the gateway does: a draft saved before
     // the gate holds the model's doses unchecked, and an earlier gate may have verified a dose a later one rejects.
-    const likely = source.result.differential.likely[0];
-    const late = source.result.therapy ? gateTherapy(source.result.therapy, gateEvidence(therapyGrounding, grounding), likely && { icd10: likely.icd10, label: likely.label }) : undefined;
-    const withoutTherapy = { ...source.result };
-    delete withoutTherapy.therapy;
-    // An earlier gate's report keeps its removals and safety items; only doses the current gate no longer verifies are downgraded.
-    const unverified = new Set(late?.report.drugs.filter(d => d.status !== "verified").map(d => d.drug));
-    const result = !late ? source.result : !late.therapy ? withoutTherapy : { ...source.result, therapy: stored ? { ...source.result.therapy!, regimen: late.therapy.regimen } : late.therapy };
-    const gate = !late ? stored : stored && late.therapy ? { ...stored, drugs: stored.drugs.map(d => d.status === "verified" && unverified.has(d.drug) ? { ...d, status: "doseRemoved" as const } : d) } : late.report;
+    const { result, gate } = applyTherapyGate(source.result, gateEvidence(therapyGrounding, grounding), stored);
     return miraDraft(result, source.traceId, source.createdAt, source.case, message.mode ? miraFocus(message.mode) : undefined, gate) + theOracleCitations(grounding, therapyGrounding, gate);
   } catch { return message.content; }
 }
 
 export function miraMessage(analysis: MiraAnalysis, reviewDefaults?: ReviewItem[], mode: ModeId = "ddx"): Message {
   const content = miraDraft(analysis.result, analysis.traceId, analysis.createdAt, analysis.case, miraFocus(mode), analysis.evidenceGate) + theOracleCitations(analysis.grounding, analysis.therapyGrounding, analysis.evidenceGate);
-  return { id: newId(), role: "assistant", mode, content, originalContent: content, createdAt: analysis.createdAt, reviewStatus: "draft", reviewItems: freshReview(reviewDefaults), sourceText: JSON.stringify({ kind: "MIRA", contractVersion: "1", ...analysis, theOracleSource, review: "belum ditinjau" }, null, 2) };
+  return { id: newId(), role: "assistant", mode, content, originalContent: content, createdAt: analysis.createdAt, reviewStatus: "draft", reviewItems: freshReview(reviewDefaults), sourceText: JSON.stringify({ kind: "MIRA", contractVersion: "1", ...analysis, theOracleSource, review: "belum ditinjau" }) };
 }

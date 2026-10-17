@@ -4,7 +4,7 @@ import { createMiraGateway, type StageLog } from "../src/lib/mira/gateway";
 import { emptyCase } from "../src/lib/mira/contract";
 import { THEORACLE_GROUNDING_CAPABILITY, TheOracleGroundingError, type TheOracleGroundingBundle } from "../src/lib/theoracle-grounding-types";
 
-const version = `mira-service/test+contract=1+provider=openrouter+data=synthetic-only+plan=${selectedMiraModel}+assess=${selectedMiraModel}+experimental`;
+const version = `mira-service/test+contract=1+provider=openai+data=synthetic-only+plan=${selectedMiraModel}+assess=${selectedMiraModel}+experimental`;
 const meta = { version, model: `${selectedMiraModel}+${selectedMiraModel}`, costUsd: 0.01 };
 const input = () => new Request("http://127.0.0.1:3104/api/mira", { method: "POST", headers: { Origin: "http://127.0.0.1:3104", "Content-Type": "application/json" }, body: JSON.stringify({ case: { ...emptyCase(), chiefComplaint: "Batuk demam fiktif" }, synthetic: true }) });
 const bundle = (text: string): TheOracleGroundingBundle => ({ version: THEORACLE_GROUNDING_CAPABILITY, corpus: { name: "TheOracle", indexSha256: "a".repeat(64), embeddingModel: { id: "onnx-community/embeddinggemma-300m-ONNX", revision: "e".repeat(40), dtype: "fp32", dims: 768 }, retrievedAt: "2026-10-11T12:00:00.000Z", reviewProvenance: "fixture" }, queryDigest: "b".repeat(64), evidence: [{ evidenceId: "E1", text, retrievalRank: 1, similarity: 0.6, source: { title: "ppk.pdf", docSource: "uji", origin: "fixture", textSha256: "c".repeat(64) } }] });
@@ -45,6 +45,7 @@ describe("targeted therapy pipeline", () => {
     expect(body.evidenceGate.drugs.map((d: { status: string }) => d.status)).toEqual(["verified", "removed"]);
     expect(body.therapyGrounding.evidence[0].evidenceId).toBe("E1");
     expect(body.pipeline.path).toBe("targeted");
+    expect(body.result.meta.costUsd).toBe(0.02);
     expect(logs.map(l => l.stage)).toEqual(["retrieve_dx", "mira_dx", "retrieve_tx", "mira_tx", "gate"]);
     expect(JSON.stringify(logs)).not.toContain("Batuk");
   });

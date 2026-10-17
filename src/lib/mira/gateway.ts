@@ -1,5 +1,5 @@
 import { containsIdentity, validCase, validResult, type MiraResult } from "./contract";
-import { gateEvidence, gateTherapy, type EvidenceGateReport } from "../theoracle-evidence-gate";
+import { applyTherapyGate, gateEvidence, type EvidenceGateReport } from "../theoracle-evidence-gate";
 import { miraServiceVersion } from "./model-profile";
 import { THEORACLE_GROUNDING_CAPABILITY, TheOracleGroundingError, validTheOracleGrounding, type TheOracleGroundingBundle } from "../theoracle-grounding-types";
 import type { CaseState } from "./types";
@@ -100,7 +100,7 @@ export function createMiraGateway(options: Options = {}) {
         let targetedReady = false;
         if (selectedModel || options.retrieveGrounding) {
           const health = await serviceHealth(controller.signal);
-          if (selectedModel && !health.modelReady) return failure("MODEL_REQUIRED", "Perencanaan dan asesmen harus memakai profil OpenRouter yang dipilih. Tidak ada analisis dijalankan.", 503);
+          if (selectedModel && !health.modelReady) return failure("MODEL_REQUIRED", "Perencanaan dan asesmen harus memakai profil Gemini yang dipilih. Tidak ada analisis dijalankan.", 503);
           if (options.retrieveGrounding && !health.groundingReady) return failure("GROUNDING_REQUIRED", "Layanan analisis belum mendukung referensi TheOracle. Muat ulang layanan setelah pembaruan.", 503);
           targetedReady = health.targetedReady;
         }
@@ -148,9 +148,11 @@ export function createMiraGateway(options: Options = {}) {
               const value = await postService("/v1/therapy/step", { contractVersion: "1", traceId, case: caseData, diagnosis: target, grounding: bundle });
               if (!value || typeof value !== "object" || !("status" in value) || value.status !== "ok") throw new ServiceFailure(value && typeof value === "object" && "error" in value && value.error && typeof value.error === "object" && "code" in value.error && typeof value.error.code === "string" ? value.error.code : "UNAVAILABLE");
               if (!("therapy" in value)) throw new ServiceFailure("CONTRACT");
-              const merged = { ...base, therapy: value.therapy };
               const cost = "meta" in value && value.meta && typeof value.meta === "object" && "costUsd" in value.meta ? value.meta.costUsd : null;
-              if (!validResult(merged) || typeof cost !== "number" || !Number.isFinite(cost) || cost < 0 || cost > maxCostUsd) throw new ServiceFailure("CONTRACT");
+              if (typeof cost !== "number" || !Number.isFinite(cost) || cost < 0 || cost > maxCostUsd) throw new ServiceFailure("CONTRACT");
+              // The draft's cost line covers the whole trace: diagnosis plus therapy step.
+              const merged = { ...base, therapy: value.therapy, meta: { ...base.meta, costUsd: typeof base.meta.costUsd === "number" ? Math.round((base.meta.costUsd + cost) * 1e6) / 1e6 : base.meta.costUsd } };
+              if (!validResult(merged)) throw new ServiceFailure("CONTRACT");
               return merged;
             }, Math.max(1, deadline - performance.now() - THERAPY_RESERVE_MS));
           } catch (error) {
@@ -161,11 +163,9 @@ export function createMiraGateway(options: Options = {}) {
           }
         }
         if (final.therapy) {
-          const gated = await timed("gate", async () => gateTherapy(final.therapy!, gateEvidence(therapyGrounding, grounding), target));
-          evidenceGate = gated.report;
-          const withoutTherapy = { ...final };
-          delete withoutTherapy.therapy;
-          final = gated.therapy ? { ...final, therapy: gated.therapy } : withoutTherapy;
+          const gated = await timed("gate", async () => applyTherapyGate(final, gateEvidence(therapyGrounding, grounding)));
+          evidenceGate = gated.gate;
+          final = gated.result;
         }
         return reply({ result: final, traceId, createdAt, ...(grounding ? { grounding } : {}), ...(therapyGrounding ? { therapyGrounding } : {}), ...(evidenceGate ? { evidenceGate } : {}), pipeline: { path: targeted ? "targeted" : "legacy", stages } });
       } catch (error) {
